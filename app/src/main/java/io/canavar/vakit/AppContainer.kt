@@ -1,6 +1,8 @@
 package io.canavar.vakit
 
 import android.content.Context
+import io.canavar.vakit.complication.ComplicationRefresher
+import io.canavar.vakit.complication.ComplicationUpdater
 import io.canavar.vakit.data.DataStoreSettingsRepository
 import io.canavar.vakit.data.SettingsRepository
 import io.canavar.vakit.data.SqliteTimetableRepository
@@ -23,6 +25,7 @@ class AppContainer(private val context: Context) {
     val settings: SettingsRepository = DataStoreSettingsRepository(context.settingsDataStore)
     val resolver = NextEntryResolver()
     val selector = DistrictSelector()
+    val complicationRefresher: ComplicationRefresher = ComplicationUpdater(context)
 
     suspend fun nextEntry(districtId: Int): NextEntry? =
         nextEntryAt(districtId, LocalDateTime.now(zone))
