@@ -2,6 +2,7 @@ package io.canavar.vakit
 
 import android.content.Context
 import io.canavar.vakit.complication.BoundaryScheduler
+import io.canavar.vakit.core.launchSafely
 import io.canavar.vakit.complication.ComplicationRefresher
 import io.canavar.vakit.complication.ComplicationUpdater
 import io.canavar.vakit.data.DataStoreSettingsRepository
@@ -25,7 +26,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class AppContainer(private val context: Context) {
@@ -43,6 +43,7 @@ class AppContainer(private val context: Context) {
             settings = settings,
             selector = selector,
             refresher = complicationRefresher,
+            onDistrictChanged = { scheduleNextBoundary() },
         )
     }
     val boundaryScheduler = BoundaryScheduler(context, zone)
@@ -51,7 +52,7 @@ class AppContainer(private val context: Context) {
         LocationScheduler.ensurePeriodic(context)
         LocationScheduler.runNow(context)
         complicationRefresher.requestUpdate()
-        CoroutineScope(Dispatchers.IO).launch { scheduleNextBoundary() }
+        CoroutineScope(Dispatchers.IO).launchSafely { scheduleNextBoundary() }
     }
 
     suspend fun scheduleNextBoundary() {

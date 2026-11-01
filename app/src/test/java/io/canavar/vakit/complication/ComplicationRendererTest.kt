@@ -16,6 +16,13 @@ class ComplicationRendererTest {
         assertEquals("İkindi", content.title)
         assertEquals("14:47", content.text)
         assertEquals("İkindi 14:47", content.description)
+        assertEquals("Sonraki vakit: İkindi 14:47", content.accessibilityDescription)
+    }
+
+    @Test
+    fun `uses the state label as the accessibility description`() {
+        val content = ComplicationRenderer.render(null, null, locationBlocked = true)
+        assertEquals("Konum kapalı", content.accessibilityDescription)
     }
 
     @Test

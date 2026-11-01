@@ -62,6 +62,7 @@ class LocationCheckTest {
         settings: FakeSettings,
         refresher: FakeRefresher,
         timetable: TimetableRepository,
+        onChanged: suspend () -> Unit = {},
     ): LocationCheck = LocationCheck(
         locationSource = location,
         timetable = timetable,
@@ -71,6 +72,7 @@ class LocationCheckTest {
             hysteresisMeters = 5_000.0,
         ),
         refresher = refresher,
+        onDistrictChanged = onChanged,
     )
 
     @Test
@@ -97,16 +99,24 @@ class LocationCheckTest {
     }
 
     @Test
-    fun `a distant fix switches the district`() = runTest {
+    fun `a distant fix switches the district and notifies`() = runTest {
         val settings = FakeSettings(Settings(districtId = 9206))
         val refresher = FakeRefresher()
+        var changed = 0
         val timetable = object : TimetableRepository {
             override fun districts(): List<District> = listOf(ankara, istanbul)
             override fun times(districtId: Int, month: Int, day: Int): DayTimes? = null
         }
-        check(FakeLocation(LocationFix(0.0, 98.0, 1L)), settings, refresher, timetable).run()
+        check(
+            FakeLocation(LocationFix(0.0, 98.0, 1L)),
+            settings,
+            refresher,
+            timetable,
+            onChanged = { changed++ },
+        ).run()
         assertEquals(9541, settings.district?.id)
         assertEquals(true, settings.auto)
+        assertEquals(1, changed)
         assertFalse(settings.current.locationBlocked)
     }
 

@@ -35,6 +35,7 @@ class NextEntryComplicationService : SuspendingComplicationDataSourceService() {
                     title = null,
                     text = ComplicationRenderer.NO_DATA,
                     description = ComplicationRenderer.NO_DATA,
+                    accessibilityDescription = ComplicationRenderer.NO_DATA,
                 )
             }
             val tapAction = PendingIntent.getActivity(
@@ -47,7 +48,7 @@ class NextEntryComplicationService : SuspendingComplicationDataSourceService() {
             when (request.complicationType) {
                 ComplicationType.SHORT_TEXT -> ShortTextComplicationData.Builder(
                     text = text(content.text),
-                    contentDescription = text(content.description),
+                    contentDescription = text(content.accessibilityDescription),
                 )
                     .setTitle(content.title?.let { text(it) })
                     .setTapAction(tapAction)
@@ -55,7 +56,7 @@ class NextEntryComplicationService : SuspendingComplicationDataSourceService() {
 
                 ComplicationType.LONG_TEXT -> LongTextComplicationData.Builder(
                     text = text(content.description),
-                    contentDescription = text(content.description),
+                    contentDescription = text(content.accessibilityDescription),
                 )
                     .setTitle(
                         if (content.title != null) text("Sonraki vakit") else null,

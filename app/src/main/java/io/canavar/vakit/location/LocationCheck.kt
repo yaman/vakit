@@ -11,6 +11,7 @@ class LocationCheck(
     private val settings: SettingsRepository,
     private val selector: DistrictSelector,
     private val refresher: ComplicationRefresher,
+    private val onDistrictChanged: suspend () -> Unit = {},
 ) {
     suspend fun run() {
         val current = settings.read()
@@ -34,6 +35,7 @@ class LocationCheck(
         val selected = selector.select(currentDistrict, fix.lat, fix.lon, catalog)
         if (selected != null && selected.id != currentDistrict?.id) {
             settings.setDistrict(selected, auto = true)
+            onDistrictChanged()
         }
         refresher.requestUpdate()
     }

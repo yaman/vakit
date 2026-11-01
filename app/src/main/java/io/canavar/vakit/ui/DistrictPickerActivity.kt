@@ -20,9 +20,9 @@ import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import io.canavar.vakit.VakitApp
+import io.canavar.vakit.core.launchSafely
 import io.canavar.vakit.domain.District
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class DistrictPickerActivity : ComponentActivity() {
@@ -66,11 +66,14 @@ fun DistrictPickerRoute() {
                 Chip(
                     label = { Text(district.name) },
                     onClick = {
-                        scope.launch {
-                            container.settings.setDistrict(district, auto = false)
-                            container.scheduleNextBoundary()
-                            container.complicationRefresher.requestUpdate()
-                            (context as? Activity)?.finish()
+                        scope.launchSafely {
+                            try {
+                                container.settings.setDistrict(district, auto = false)
+                                container.scheduleNextBoundary()
+                                container.complicationRefresher.requestUpdate()
+                            } finally {
+                                (context as? Activity)?.finish()
+                            }
                         }
                     },
                 )

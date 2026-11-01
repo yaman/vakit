@@ -7,6 +7,7 @@ data class ComplicationContent(
     val title: String?,
     val text: String,
     val description: String,
+    val accessibilityDescription: String,
 )
 
 object ComplicationRenderer {
@@ -21,13 +22,28 @@ object ComplicationRenderer {
     ): ComplicationContent {
         if (districtId == null) {
             val label = if (locationBlocked) LOCATION_OFF else SETUP
-            return ComplicationContent(title = null, text = label, description = label)
+            return ComplicationContent(
+                title = null,
+                text = label,
+                description = label,
+                accessibilityDescription = label,
+            )
         }
         if (next == null) {
-            return ComplicationContent(title = null, text = NO_DATA, description = NO_DATA)
+            return ComplicationContent(
+                title = null,
+                text = NO_DATA,
+                description = NO_DATA,
+                accessibilityDescription = NO_DATA,
+            )
         }
         val name = next.prayer.displayName
         val time = TimeFormat.hhmm(next.at)
-        return ComplicationContent(title = name, text = time, description = "$name $time")
+        return ComplicationContent(
+            title = name,
+            text = time,
+            description = "$name $time",
+            accessibilityDescription = "Sonraki vakit: $name $time",
+        )
     }
 }

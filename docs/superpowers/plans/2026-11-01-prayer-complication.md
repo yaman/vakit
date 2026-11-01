@@ -2042,6 +2042,8 @@ git commit -m "feat: add application container"
 
 ## Task 8: Complication data source
 
+> Executed note: `ComplicationContent` carries a separate `accessibilityDescription` (`Sonraki vakit: İkindi 14:47`). Both complication types use it for `contentDescription`; the plan's single `description` field was wrong.
+
 **Files:**
 - Create: `app/src/main/java/io/canavar/vakit/complication/ComplicationRenderer.kt`
 - Create: `app/src/main/java/io/canavar/vakit/complication/ComplicationRefresher.kt`
@@ -2358,7 +2360,7 @@ git commit -m "feat: publish the next prayer complication"
 
 ## Task 9: Location check, worker, and boot receiver
 
-> Executed note: `LocationCheck.run()` records `setLastCheck(System.currentTimeMillis())` after the automatic-location guard. The check accepts fine or coarse location, and the worker treats an approximate grant as usable.
+> Executed note: `LocationCheck.run()` records `setLastCheck(System.currentTimeMillis())` after the automatic-location guard. The check accepts fine or coarse location, and the worker treats an approximate grant as usable. It also takes `onDistrictChanged` and calls it after a switch; the container wires it to `scheduleNextBoundary()`, so the alarm is re-armed where the change happens.
 
 **Files:**
 - Create: `app/src/main/java/io/canavar/vakit/location/LocationSource.kt`
@@ -3023,7 +3025,7 @@ git commit -m "feat: refresh the complication at each prayer boundary"
 
 ## Task 11: Status screen, district picker, and permissions
 
-> Executed note: the status screen also shows the province, the last check age and the last fix age. An approximate location grant also runs the worker. On first launch it prompts for location once, tracked by `permissionAsked`.
+> Executed note: the status screen also shows the province, the last check age and the last fix age. An approximate location grant also runs the worker. On first launch it prompts for location once, tracked by `permissionAsked`. The picker writes settings inside `launchSafely` and finishes in `finally`, so a storage error cannot crash it.
 
 **Files:**
 - Create: `app/src/main/java/io/canavar/vakit/ui/StatusUiState.kt`
