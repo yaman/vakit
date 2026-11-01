@@ -3330,6 +3330,7 @@ import io.canavar.vakit.ui.StatusRoute
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        (application as VakitApp).container.start()
         setContent {
             MaterialTheme {
                 StatusRoute()
