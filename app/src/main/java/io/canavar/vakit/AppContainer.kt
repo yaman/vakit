@@ -1,6 +1,7 @@
 package io.canavar.vakit
 
 import android.content.Context
+import io.canavar.vakit.complication.BoundaryScheduler
 import io.canavar.vakit.complication.ComplicationRefresher
 import io.canavar.vakit.complication.ComplicationUpdater
 import io.canavar.vakit.data.DataStoreSettingsRepository
@@ -18,7 +19,9 @@ import io.canavar.vakit.location.LocationCheck
 import io.canavar.vakit.location.LocationScheduler
 import java.time.LocalDateTime
 import java.time.ZoneId
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class AppContainer(private val context: Context) {
@@ -38,15 +41,18 @@ class AppContainer(private val context: Context) {
             refresher = complicationRefresher,
         )
     }
+    val boundaryScheduler = BoundaryScheduler(context, zone)
 
     fun start() {
         LocationScheduler.ensurePeriodic(context)
         LocationScheduler.runNow(context)
         complicationRefresher.requestUpdate()
+        CoroutineScope(Dispatchers.IO).launch { scheduleNextBoundary() }
     }
 
     suspend fun scheduleNextBoundary() {
-        // Replaced in Task 10 with the AlarmManager implementation.
+        val districtId = settings.read().districtId ?: return
+        boundaryScheduler.schedule(nextEntry(districtId))
     }
 
     suspend fun nextEntry(districtId: Int): NextEntry? =
