@@ -2442,7 +2442,7 @@ class LocationCheckTest {
         timetable = timetable,
         settings = settings,
         selector = DistrictSelector(
-            distance = { _, _, _, lon2 -> lon2 * 1_000.0 },
+            distance = { _, lon1, _, lon2 -> kotlin.math.abs(lon2 - lon1) * 1_000.0 },
             hysteresisMeters = 5_000.0,
         ),
         refresher = refresher,
@@ -2746,14 +2746,13 @@ class BootReceiver : BroadcastReceiver() {
 
 - [ ] **Step 6: Wire the application and manifest**
 
-Add to `VakitApp.kt`:
+Add to `MainActivity.onCreate`, before `setContent`:
 
 ```kotlin
-override fun onCreate() {
-    super.onCreate()
-    container.start()
-}
+(application as VakitApp).container.start()
 ```
+
+Do not call `start()` from `VakitApp.onCreate`. Robolectric instantiates the application before WorkManager is initialized, so the call belongs to the activity. The first run already opens the activity for the permission grant, and the boot receiver covers later boots.
 
 Add to `AppContainer.kt`:
 
