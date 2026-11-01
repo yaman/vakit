@@ -26,6 +26,10 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.DistrictPickerActivity"
+            android:exported="false" />
+
         <service
             android:name=".complication.NextEntryComplicationService"
             android:exported="true"

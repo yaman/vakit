@@ -13,10 +13,14 @@ import io.canavar.vakit.data.settingsDataStore
 import io.canavar.vakit.domain.DistrictSelector
 import io.canavar.vakit.domain.NextEntry
 import io.canavar.vakit.domain.NextEntryResolver
+import io.canavar.vakit.domain.Prayer
+import io.canavar.vakit.domain.TimeFormat
 import io.canavar.vakit.domain.canonicalMonthDay
 import io.canavar.vakit.location.FusedLocationSource
 import io.canavar.vakit.location.LocationCheck
 import io.canavar.vakit.location.LocationScheduler
+import io.canavar.vakit.ui.StatusUiState
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
@@ -53,6 +57,34 @@ class AppContainer(private val context: Context) {
     suspend fun scheduleNextBoundary() {
         val districtId = settings.read().districtId ?: return
         boundaryScheduler.schedule(nextEntry(districtId))
+    }
+
+    suspend fun loadStatus(
+        hasFinePermission: Boolean,
+        hasBackgroundPermission: Boolean,
+    ): StatusUiState = withContext(Dispatchers.IO) {
+        val current = settings.read()
+        val districtId = current.districtId
+        val today = LocalDate.now(zone)
+        val monthDay = canonicalMonthDay(today)
+        val times = districtId?.let {
+            timetable.times(it, monthDay.monthValue, monthDay.dayOfMonth)
+        }
+        StatusUiState(
+            districtName = current.districtName,
+            province = current.districtProvince,
+            next = districtId?.let { nextEntry(it) },
+            today = times?.let { value ->
+                Prayer.entries.map { prayer ->
+                    prayer to TimeFormat.hhmm(value.minuteOf(prayer))
+                }
+            } ?: emptyList(),
+            lastFixAt = current.lastFix?.atEpochMs,
+            locationBlocked = current.locationBlocked,
+            autoLocation = current.autoLocation,
+            hasFinePermission = hasFinePermission,
+            hasBackgroundPermission = hasBackgroundPermission,
+        )
     }
 
     suspend fun nextEntry(districtId: Int): NextEntry? =
