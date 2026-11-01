@@ -17,7 +17,7 @@ class FusedLocationSource(private val context: Context) : LocationSource {
 
     @SuppressLint("MissingPermission")
     override suspend fun current(): LocationFix? {
-        if (!hasFinePermission()) return null
+        if (!hasLocationPermission()) return null
         val token = CancellationTokenSource()
         val fresh = try {
             withTimeoutOrNull(45_000) {
@@ -39,9 +39,13 @@ class FusedLocationSource(private val context: Context) : LocationSource {
         }
     }
 
-    private fun hasFinePermission(): Boolean =
+    private fun hasLocationPermission(): Boolean =
         ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
+        ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ) == PackageManager.PERMISSION_GRANTED
 }

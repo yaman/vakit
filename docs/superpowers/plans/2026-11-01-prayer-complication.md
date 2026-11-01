@@ -1383,6 +1383,8 @@ git commit -m "feat: add timetable generator and development fixture"
 
 ## Task 5: Timetable database and repository
 
+> Executed note: the repository test builds its own two-district database in `filesDir/test-timetable.db` instead of reading the bundled asset. The asset is covered only by the copy test. This keeps the query test independent of which districts the bundle contains.
+
 **Files:**
 - Create: `app/src/main/java/io/canavar/vakit/data/TimetableDb.kt`
 - Create: `app/src/main/java/io/canavar/vakit/data/TimetableRepository.kt`
@@ -1847,6 +1849,8 @@ git commit -m "feat: persist district and location settings"
 ---
 
 ## Task 7: Application container
+
+> Executed note: the container test takes the first district from the bundled asset and asks for the next entry at 14:00 on 2026-06-15. At that hour the next entry is İkindi for every Turkish district, so the test does not depend on the fixture's exact times.
 
 **Files:**
 - Create: `app/src/main/java/io/canavar/vakit/VakitApp.kt`
@@ -2549,7 +2553,7 @@ class FusedLocationSource(private val context: Context) : LocationSource {
 
     @SuppressLint("MissingPermission")
     override suspend fun current(): LocationFix? {
-        if (!hasFinePermission()) return null
+        if (!hasLocationPermission()) return null
         val token = CancellationTokenSource()
         val fresh = try {
             withTimeoutOrNull(45_000) {
@@ -2571,11 +2575,15 @@ class FusedLocationSource(private val context: Context) : LocationSource {
         }
     }
 
-    private fun hasFinePermission(): Boolean =
+    private fun hasLocationPermission(): Boolean =
         ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION,
-        ) == PackageManager.PERMISSION_GRANTED
+        ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ) == PackageManager.PERMISSION_GRANTED
 }
 ```
 
@@ -2769,6 +2777,7 @@ Imports: `io.canavar.vakit.location.LocationScheduler`.
 Add to `AndroidManifest.xml` before `<application>`:
 
 ```xml
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -3017,8 +3026,8 @@ git commit -m "feat: refresh the complication at each prayer boundary"
 **Interfaces:**
 - Consumes: `AppContainer`, `SettingsRepository`, `TimetableRepository`, `LocationScheduler`, `ComplicationRefresher`.
 - Produces:
-  - `data class StatusUiState(districtName: String?, province: String?, next: NextEntry?, today: List<Pair<Prayer, String>>, lastFixAt: Long?, locationBlocked: Boolean, autoLocation: Boolean, hasFinePermission: Boolean, hasBackgroundPermission: Boolean)`.
-  - `suspend fun AppContainer.loadStatus(hasFine: Boolean, hasBackground: Boolean): StatusUiState`.
+  - `data class StatusUiState(districtName: String?, province: String?, next: NextEntry?, today: List<Pair<Prayer, String>>, lastFixAt: Long?, locationBlocked: Boolean, autoLocation: Boolean, hasLocationPermission: Boolean, hasBackgroundPermission: Boolean)`.
+  - `suspend fun AppContainer.loadStatus(hasLocationPermission: Boolean, hasBackgroundPermission: Boolean): StatusUiState`.
   - `class DistrictPickerActivity : ComponentActivity`.
 
 - [ ] **Step 1: Write the status state and loader**
@@ -3039,7 +3048,7 @@ data class StatusUiState(
     val lastFixAt: Long?,
     val locationBlocked: Boolean,
     val autoLocation: Boolean,
-    val hasFinePermission: Boolean,
+    val hasLocationPermission: Boolean,
     val hasBackgroundPermission: Boolean,
 )
 ```
@@ -3048,7 +3057,7 @@ Add to `AppContainer.kt`:
 
 ```kotlin
 suspend fun loadStatus(
-    hasFinePermission: Boolean,
+    hasLocationPermission: Boolean,
     hasBackgroundPermission: Boolean,
 ): StatusUiState = withContext(Dispatchers.IO) {
     val current = settings.read()
@@ -3070,7 +3079,7 @@ suspend fun loadStatus(
         lastFixAt = current.lastFix?.atEpochMs,
         locationBlocked = current.locationBlocked,
         autoLocation = current.autoLocation,
-        hasFinePermission = hasFinePermission,
+        hasLocationPermission = hasLocationPermission,
         hasBackgroundPermission = hasBackgroundPermission,
     )
 }
@@ -3128,17 +3137,22 @@ fun StatusRoute() {
     var state by remember { mutableStateOf<StatusUiState?>(null) }
     var reload by remember { mutableIntStateOf(0) }
 
-    val hasFine = ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-    ) == PackageManager.PERMISSION_GRANTED
+    val hasLocation =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+        ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ) == PackageManager.PERMISSION_GRANTED
     val hasBackground = ContextCompat.checkSelfPermission(
         context,
         Manifest.permission.ACCESS_BACKGROUND_LOCATION,
     ) == PackageManager.PERMISSION_GRANTED
 
     LaunchedEffect(reload) {
-        state = container.loadStatus(hasFine, hasBackground)
+        state = container.loadStatus(hasLocation, hasBackground)
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -3217,7 +3231,7 @@ fun StatusScreen(
         Spacer(Modifier.height(8.dp))
         Button(onClick = onRefreshLocation) { Text("Konumu yenile") }
         Button(onClick = onPickDistrict) { Text("İlçe seç") }
-        if (!state.hasFinePermission) {
+        if (!state.hasLocationPermission) {
             Button(onClick = onGrantLocation) { Text("İzin ver") }
         } else if (!state.hasBackgroundPermission) {
             Button(onClick = onOpenSettings) { Text("Arka plan izni") }

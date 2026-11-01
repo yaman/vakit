@@ -43,17 +43,22 @@ fun StatusRoute() {
     var state by remember { mutableStateOf<StatusUiState?>(null) }
     var reload by remember { mutableIntStateOf(0) }
 
-    val hasFine = ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-    ) == PackageManager.PERMISSION_GRANTED
+    val hasLocation =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+        ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ) == PackageManager.PERMISSION_GRANTED
     val hasBackground = ContextCompat.checkSelfPermission(
         context,
         Manifest.permission.ACCESS_BACKGROUND_LOCATION,
     ) == PackageManager.PERMISSION_GRANTED
 
     LaunchedEffect(reload) {
-        state = container.loadStatus(hasFine, hasBackground)
+        state = container.loadStatus(hasLocation, hasBackground)
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -132,7 +137,7 @@ fun StatusScreen(
         Spacer(Modifier.height(8.dp))
         Button(onClick = onRefreshLocation) { Text("Konumu yenile") }
         Button(onClick = onPickDistrict) { Text("İlçe seç") }
-        if (!state.hasFinePermission) {
+        if (!state.hasLocationPermission) {
             Button(onClick = onGrantLocation) { Text("İzin ver") }
         } else if (!state.hasBackgroundPermission) {
             Button(onClick = onOpenSettings) { Text("Arka plan izni") }

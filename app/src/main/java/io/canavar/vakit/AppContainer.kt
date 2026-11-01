@@ -60,7 +60,7 @@ class AppContainer(private val context: Context) {
     }
 
     suspend fun loadStatus(
-        hasFinePermission: Boolean,
+        hasLocationPermission: Boolean,
         hasBackgroundPermission: Boolean,
     ): StatusUiState = withContext(Dispatchers.IO) {
         val current = settings.read()
@@ -82,7 +82,7 @@ class AppContainer(private val context: Context) {
             lastFixAt = current.lastFix?.atEpochMs,
             locationBlocked = current.locationBlocked,
             autoLocation = current.autoLocation,
-            hasFinePermission = hasFinePermission,
+            hasLocationPermission = hasLocationPermission,
             hasBackgroundPermission = hasBackgroundPermission,
         )
     }

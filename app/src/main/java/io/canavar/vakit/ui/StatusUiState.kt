@@ -11,6 +11,6 @@ data class StatusUiState(
     val lastFixAt: Long?,
     val locationBlocked: Boolean,
     val autoLocation: Boolean,
-    val hasFinePermission: Boolean,
+    val hasLocationPermission: Boolean,
     val hasBackgroundPermission: Boolean,
 )

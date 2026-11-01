@@ -8,6 +8,7 @@ import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,15 +24,40 @@ class TimetableRepositoryTest {
     @Before
     fun setUp() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        File(context.filesDir, "timetable.db").delete()
-        File(context.filesDir, "timetable.version").delete()
-        File(context.filesDir, "timetable.db.tmp").delete()
-        TimetableDb(context).ensureReady()
-        db = SQLiteDatabase.openDatabase(
-            File(context.filesDir, "timetable.db").path,
-            null,
-            SQLiteDatabase.OPEN_READONLY,
+        val file = File(context.filesDir, "test-timetable.db")
+        file.delete()
+        db = SQLiteDatabase.openOrCreateDatabase(file, null)
+        db.execSQL(
+            """
+            CREATE TABLE districts (
+              id INTEGER PRIMARY KEY,
+              name TEXT NOT NULL,
+              province TEXT NOT NULL,
+              lat REAL NOT NULL,
+              lon REAL NOT NULL
+            ) WITHOUT ROWID
+            """.trimIndent(),
         )
+        db.execSQL(
+            """
+            CREATE TABLE times (
+              district_id INTEGER NOT NULL,
+              month INTEGER NOT NULL,
+              day INTEGER NOT NULL,
+              imsak INTEGER NOT NULL,
+              gunes INTEGER NOT NULL,
+              ogle INTEGER NOT NULL,
+              ikindi INTEGER NOT NULL,
+              aksam INTEGER NOT NULL,
+              yatsi INTEGER NOT NULL,
+              PRIMARY KEY (district_id, month, day)
+            ) WITHOUT ROWID
+            """.trimIndent(),
+        )
+        db.execSQL("INSERT INTO districts VALUES (1, 'ANKARA', 'ANKARA', 39.9, 32.8)")
+        db.execSQL("INSERT INTO districts VALUES (2, 'İSTANBUL', 'İSTANBUL', 41.0, 29.0)")
+        db.execSQL("INSERT INTO times VALUES (1, 6, 15, 346, 430, 757, 927, 1074, 1154)")
+        db.execSQL("INSERT INTO times VALUES (2, 6, 15, 347, 431, 757, 927, 1073, 1153)")
         repository = SqliteTimetableRepository(db)
     }
 
@@ -41,25 +67,25 @@ class TimetableRepositoryTest {
     }
 
     @Test
-    fun `lists both fixture districts`() {
-        assertEquals(listOf(9206, 9541), repository.districts().map { it.id })
+    fun `lists both districts`() {
+        assertEquals(listOf(1, 2), repository.districts().map { it.id })
     }
 
     @Test
     fun `returns six times for Ankara in June`() {
-        val times = repository.times(9206, 6, 15)
-        assertEquals(DayTimes(346, 430, 757, 927, 1074, 1154), times)
+        assertEquals(DayTimes(346, 430, 757, 927, 1074, 1154), repository.times(1, 6, 15))
     }
 
     @Test
-    fun `returns null for February 29 in the canonical year`() {
-        assertNull(repository.times(9206, 2, 29))
+    fun `returns null for an absent day`() {
+        assertNull(repository.times(1, 2, 29))
     }
 
     @Test
-    fun `copies the asset to internal storage`() {
+    fun `copies the bundled asset to internal storage`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val file = File(context.filesDir, "timetable.db")
-        assertEquals(true, file.exists())
+        File(context.filesDir, "timetable.db").delete()
+        TimetableDb(context).ensureReady()
+        assertTrue(File(context.filesDir, "timetable.db").exists())
     }
 }

@@ -224,7 +224,7 @@ District selection:
 
 Permissions:
 
-- `ACCESS_FINE_LOCATION` for foreground fixes.
+- `ACCESS_COARSE_LOCATION` and `ACCESS_FINE_LOCATION` for foreground fixes. Android 12 and later present the precise/approximate choice. The app accepts either, because district selection only needs city-level accuracy.
 - `ACCESS_BACKGROUND_LOCATION` for fixes taken by the worker.
 - `RECEIVE_BOOT_COMPLETED` for the boot receiver.
 - No `INTERNET`.

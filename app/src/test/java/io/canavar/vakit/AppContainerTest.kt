@@ -2,6 +2,7 @@ package io.canavar.vakit
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import io.canavar.vakit.domain.Prayer
 import java.io.File
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -29,13 +30,14 @@ class AppContainerTest {
     }
 
     @Test
-    fun `resolves the next entry from the fixture database`() = runTest {
+    fun `resolves the next entry from the bundled database`() = runTest {
+        val district = container.timetable.districts().first()
         val next = container.nextEntryAt(
-            districtId = 9206,
-            now = LocalDateTime.of(2026, 6, 15, 13, 0),
+            districtId = district.id,
+            now = LocalDateTime.of(2026, 6, 15, 14, 0),
         )
         assertNotNull(next)
-        assertEquals("İkindi", next?.prayer?.displayName)
+        assertEquals(Prayer.IKINDI, next?.prayer)
     }
 
     @Test
