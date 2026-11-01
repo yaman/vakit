@@ -3019,7 +3019,7 @@ git commit -m "feat: refresh the complication at each prayer boundary"
 
 ## Task 11: Status screen, district picker, and permissions
 
-> Executed note: the status screen also shows the province, the last check age and the last fix age. An approximate location grant also runs the worker.
+> Executed note: the status screen also shows the province, the last check age and the last fix age. An approximate location grant also runs the worker. On first launch it prompts for location once, tracked by `permissionAsked`.
 
 **Files:**
 - Create: `app/src/main/java/io/canavar/vakit/ui/StatusUiState.kt`

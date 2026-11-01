@@ -75,6 +75,16 @@ fun StatusRoute() {
         ActivityResultContracts.StartActivityForResult(),
     ) { reload++ }
 
+    LaunchedEffect(Unit) {
+        if (!hasLocation) {
+            val settings = container.settings.read()
+            if (!settings.permissionAsked) {
+                container.settings.setPermissionAsked()
+                permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }
+    }
+
     StatusScreen(
         state = state,
         onRefreshLocation = {
