@@ -31,9 +31,9 @@ import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import io.canavar.vakit.VakitApp
+import io.canavar.vakit.core.launchSafely
 import io.canavar.vakit.domain.TimeFormat
 import io.canavar.vakit.location.LocationScheduler
-import kotlinx.coroutines.launch
 
 @Composable
 fun StatusRoute() {
@@ -107,7 +107,7 @@ fun StatusRoute() {
             )
         },
         onUseGps = {
-            scope.launch {
+            scope.launchSafely {
                 container.settings.setAutoLocation(true)
                 LocationScheduler.runNow(context)
                 reload++
