@@ -322,13 +322,15 @@ After this setup, everything is automatic: boot, hourly checks, district changes
   - `androidx.wear.watchface:watchface-complications-data-source-ktx:1.3.0`
   - `androidx.work:work-runtime-ktx:2.10.1`
   - `androidx.datastore:datastore-preferences:1.1.7`
-  - `com.google.android.gms:play-services-location:21.4.0`
+  - `com.google.android.gms:play-services-location:21.3.0`
   - `androidx.activity:activity-compose:1.10.1`
   - `androidx.core:core-ktx:1.15.0`
 
 The newest Wear Compose release requires `compileSdk 37`. The pinned set above is the newest combination that builds against `compileSdk 35`.
 
 The location client version is independent of the Play services 26 runtime on the watch. The client library talks to whatever Play services APK is installed.
+
+21.4.0 is compiled with Kotlin 2.3 metadata and cannot be consumed by the pinned Kotlin 2.1.20 compiler. 21.3.0 is the newest release that builds with this toolchain.
 
 `targetSdk 34` on an API 36 device is supported. If Android 16 blocks location or background work during device testing, record the exact block and test the fallbacks in section 19. The data path does not change.
 

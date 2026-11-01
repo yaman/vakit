@@ -6,7 +6,7 @@
 
 **Architecture:** One Android application module. A bundled SQLite database holds one canonical year of Diyanet times for 869 Türkiye districts, keyed by month and day. A pure resolver picks the next entry from the cache and the clock. A WorkManager job reads location hourly and switches districts with hysteresis. A complication data source renders the result. No network permission.
 
-**Tech Stack:** Kotlin 2.1, Compose for Wear OS 1.6.1, AndroidX complications 1.3.0, WorkManager 2.10.1, DataStore 1.1.7, Play services location 21.4.0, SQLite, Python 3 generator.
+**Tech Stack:** Kotlin 2.1, Compose for Wear OS 1.6.1, AndroidX complications 1.3.0, WorkManager 2.10.1, DataStore 1.1.7, Play services location 21.3.0, SQLite, Python 3 generator.
 
 **Spec:** `docs/superpowers/specs/2026-11-01-prayer-complication-design.md`
 
@@ -129,7 +129,7 @@ wearCompose = "1.6.1"
 wearComplications = "1.3.0"
 work = "2.10.1"
 datastore = "1.1.7"
-playServicesLocation = "21.4.0"
+playServicesLocation = "21.3.0"
 coroutines = "1.9.0"
 junit = "4.13.2"
 robolectric = "4.14.1"
