@@ -1610,6 +1610,8 @@ git commit -m "feat: read the bundled timetable database"
 
 ## Task 6: Settings storage
 
+> Executed note: `Settings` also carries `lastCheckAt`, and `SettingsRepository` has `setLastCheck(atEpochMs)`. The status screen shows the last check age.
+
 **Files:**
 - Create: `app/src/main/java/io/canavar/vakit/data/Settings.kt`
 - Create: `app/src/main/java/io/canavar/vakit/data/SettingsRepository.kt`
@@ -2352,6 +2354,8 @@ git commit -m "feat: publish the next prayer complication"
 
 ## Task 9: Location check, worker, and boot receiver
 
+> Executed note: `LocationCheck.run()` records `setLastCheck(System.currentTimeMillis())` after the automatic-location guard. The check accepts fine or coarse location, and the worker treats an approximate grant as usable.
+
 **Files:**
 - Create: `app/src/main/java/io/canavar/vakit/location/LocationSource.kt`
 - Create: `app/src/main/java/io/canavar/vakit/location/FusedLocationSource.kt`
@@ -3014,6 +3018,8 @@ git commit -m "feat: refresh the complication at each prayer boundary"
 ---
 
 ## Task 11: Status screen, district picker, and permissions
+
+> Executed note: the status screen also shows the province, the last check age and the last fix age. An approximate location grant also runs the worker.
 
 **Files:**
 - Create: `app/src/main/java/io/canavar/vakit/ui/StatusUiState.kt`

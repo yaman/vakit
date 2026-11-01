@@ -66,4 +66,10 @@ class DataStoreSettingsRepositoryTest {
         assertEquals(123L, settings.lastFix?.atEpochMs)
         assertTrue(settings.locationBlocked)
     }
+
+    @Test
+    fun `stores the last check time`() = runTest {
+        repository.setLastCheck(456L)
+        assertEquals(456L, repository.read().lastCheckAt)
+    }
 }

@@ -15,6 +15,7 @@ class LocationCheck(
     suspend fun run() {
         val current = settings.read()
         if (!current.autoLocation) return
+        settings.setLastCheck(System.currentTimeMillis())
 
         val fix = locationSource.current()
         if (fix == null) {

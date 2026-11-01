@@ -80,6 +80,7 @@ class AppContainer(private val context: Context) {
                 }
             } ?: emptyList(),
             lastFixAt = current.lastFix?.atEpochMs,
+            lastCheckAt = current.lastCheckAt,
             locationBlocked = current.locationBlocked,
             autoLocation = current.autoLocation,
             hasLocationPermission = hasLocationPermission,

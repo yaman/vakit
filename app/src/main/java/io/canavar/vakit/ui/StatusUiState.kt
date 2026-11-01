@@ -9,6 +9,7 @@ data class StatusUiState(
     val next: NextEntry?,
     val today: List<Pair<Prayer, String>>,
     val lastFixAt: Long?,
+    val lastCheckAt: Long?,
     val locationBlocked: Boolean,
     val autoLocation: Boolean,
     val hasLocationPermission: Boolean,

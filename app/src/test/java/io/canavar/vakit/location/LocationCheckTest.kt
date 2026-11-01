@@ -34,6 +34,9 @@ class LocationCheckTest {
         override suspend fun setFix(fix: LocationFix) {
             current = current.copy(lastFix = fix)
         }
+        override suspend fun setLastCheck(atEpochMs: Long) {
+            current = current.copy(lastCheckAt = atEpochMs)
+        }
         override suspend fun setAutoLocation(enabled: Boolean) {
             current = current.copy(autoLocation = enabled)
         }

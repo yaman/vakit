@@ -19,6 +19,7 @@ interface SettingsRepository {
     suspend fun read(): Settings
     suspend fun setDistrict(district: District, auto: Boolean)
     suspend fun setFix(fix: LocationFix)
+    suspend fun setLastCheck(atEpochMs: Long)
     suspend fun setAutoLocation(enabled: Boolean)
     suspend fun setLocationBlocked(blocked: Boolean)
     suspend fun setPermissionAsked()
@@ -42,6 +43,7 @@ class DataStoreSettingsRepository(
             districtProvince = values[Keys.DISTRICT_PROVINCE],
             autoLocation = values[Keys.AUTO_LOCATION] ?: true,
             lastFix = fix,
+            lastCheckAt = values[Keys.LAST_CHECK_AT],
             locationBlocked = values[Keys.LOCATION_BLOCKED] ?: false,
             permissionAsked = values[Keys.PERMISSION_ASKED] ?: false,
         )
@@ -64,6 +66,10 @@ class DataStoreSettingsRepository(
         }
     }
 
+    override suspend fun setLastCheck(atEpochMs: Long) {
+        dataStore.edit { values -> values[Keys.LAST_CHECK_AT] = atEpochMs }
+    }
+
     override suspend fun setAutoLocation(enabled: Boolean) {
         dataStore.edit { values -> values[Keys.AUTO_LOCATION] = enabled }
     }
@@ -84,6 +90,7 @@ class DataStoreSettingsRepository(
         val LAST_LAT = doublePreferencesKey("last_lat")
         val LAST_LON = doublePreferencesKey("last_lon")
         val LAST_FIX_AT = longPreferencesKey("last_fix_at")
+        val LAST_CHECK_AT = longPreferencesKey("last_check_at")
         val LOCATION_BLOCKED = booleanPreferencesKey("location_blocked")
         val PERMISSION_ASKED = booleanPreferencesKey("permission_asked")
     }

@@ -128,6 +128,9 @@ fun StatusScreen(
         }
         Text("Vakit", style = MaterialTheme.typography.title3)
         Text(state.districtName ?: "İlçe seçilmedi")
+        state.province
+            ?.takeIf { it != state.districtName }
+            ?.let { Text(it) }
         state.next?.let {
             Text("Sonraki: ${it.prayer.displayName} ${TimeFormat.hhmm(it.at)}")
         }
@@ -135,6 +138,8 @@ fun StatusScreen(
         state.today.forEach { (prayer, time) ->
             Text("${prayer.displayName}: $time")
         }
+        state.lastCheckAt?.let { Text("Son kontrol: ${minutesAgo(it)} dk önce") }
+        state.lastFixAt?.let { Text("Son konum: ${minutesAgo(it)} dk önce") }
         if (state.locationBlocked) {
             Text("Konum alınamadı")
         }
@@ -151,3 +156,6 @@ fun StatusScreen(
         }
     }
 }
+
+private fun minutesAgo(epochMs: Long): Long =
+    ((System.currentTimeMillis() - epochMs) / 60_000).coerceAtLeast(0)

@@ -12,6 +12,7 @@ data class Settings(
     val districtProvince: String? = null,
     val autoLocation: Boolean = true,
     val lastFix: LocationFix? = null,
+    val lastCheckAt: Long? = null,
     val locationBlocked: Boolean = false,
     val permissionAsked: Boolean = false,
 )
