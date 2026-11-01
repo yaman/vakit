@@ -2,7 +2,7 @@
 
 Date: 2026-11-01
 Status: Approved design
-Target device: Samsung Galaxy Watch 4 (Wear OS 3+)
+Target device: Samsung Galaxy Watch 4, Wear OS 6.0, Android 16 (API 36), Play services 26
 
 ## 1. Problem
 
@@ -46,8 +46,11 @@ Out of scope:
 
 ## 4. Device and platform
 
-- Samsung Galaxy Watch 4, Wear OS 3 or later.
-- `minSdk 30`, `targetSdk 34`, `compileSdk 35`.
+- Samsung Galaxy Watch 4.
+- Reported runtime: Wear OS 6.0, Android 16 (API 36), Play services 26.
+- `minSdk 30` keeps the app installable on Wear OS 3 and later.
+- `targetSdk 34`, `compileSdk 35`. The app opts out of Android 15 and Android 16 behavior changes. This is deliberate. The app needs no API 35 or 36 feature, and the lower target keeps background-location and job-scheduling behavior on the documented path.
+- Android 16 may warn that the app targets an older Android version. The warning is harmless for a sideloaded app.
 - The watch has Google Play services, so `FusedLocationProviderClient` is available.
 - Sideload over wireless debugging with `adb`. No Play Store listing.
 
@@ -311,11 +314,15 @@ After this setup, everything is automatic: boot, hourly checks, district changes
   - `androidx.wear.watchface:watchface-complications-data-source:1.3.0`
   - `androidx.work:work-runtime-ktx:2.10.1`
   - `androidx.datastore:datastore-preferences:1.1.7`
-  - `com.google.android.gms:play-services-location:21.3.0`
+  - `com.google.android.gms:play-services-location:21.4.0`
   - `androidx.activity:activity-compose:1.10.1`
   - `androidx.core:core-ktx:1.15.0`
 
 The newest Wear Compose release requires `compileSdk 37`. The pinned set above is the newest combination that builds against `compileSdk 35`.
+
+The location client version is independent of the Play services 26 runtime on the watch. The client library talks to whatever Play services APK is installed.
+
+`targetSdk 34` on an API 36 device is supported. If Android 16 blocks location or background work during device testing, record the exact block and test the fallbacks in section 19. The data path does not change.
 
 ## 17. Build-time generator
 
@@ -396,23 +403,26 @@ Python tests:
 - Override table wins over name matching.
 - Validation rejects a short district and a malformed time.
 
-Device checklist:
+Device checklist, run on the Wear OS 6.0 / Android 16 watch with Play services 26:
 
-1. Sideload, grant permissions, open once.
-2. Confirm the district is selected and six times appear.
-3. Add the complication, confirm the text.
-4. Reboot. Confirm the face is correct before opening the app, and confirm a location check starts.
-5. Revoke location. Confirm the app warns and keeps the last district.
-6. Pick a district manually. Confirm the override and the complication update.
-7. Set a mock location in another city, run the worker, confirm the district switches with hysteresis.
-8. Enable airplane mode. Confirm the complication still changes at the next entry.
-9. Check `dumpsys batterystats` after 24 hours.
+1. Sideload and open once. Confirm the app installs and runs with `targetSdk 34` on API 36.
+2. Grant fine location. Confirm the settings screen offers "Allow all the time". Grant it if present. If absent, record the exact screen and continue.
+3. Confirm Play services 26 returns a fix and the district is selected.
+4. Confirm six times appear.
+5. Add the complication, confirm the text.
+6. Reboot. Confirm the face is correct before opening the app, and confirm a location check starts.
+7. Revoke location. Confirm the app warns and keeps the last district.
+8. Pick a district manually. Confirm the override and the complication update.
+9. Set a mock location in another city, run the worker, confirm the district switches with hysteresis.
+10. Enable airplane mode. Confirm the complication still changes at the next entry.
+11. Check `dumpsys batterystats` after 24 hours.
 
 ## 19. Risks and fallbacks
 
 | Risk | Impact | Fallback |
 | --- | --- | --- |
-| Wear OS does not offer "Allow all the time" location | Hourly checks fail in the background | Keep the last district, warn in the app, refresh on app open |
+| Wear OS 6 does not offer "Allow all the time" location to a sideloaded app | Hourly checks fail in the background | Keep the last district, warn in the app, refresh on app open |
+| Android 16 blocks background work for a `targetSdk 34` app | Hourly checks do not run | Test a short foreground service, or refresh only on app open; the data path is unchanged |
 | Samsung face truncates short text | Name or time clipped | Long-text variant, or choose a wider slot |
 | Doze delays the boundary alarm | Stale label for minutes | Hourly worker and 900-second system update period |
 | Generator source disappears | Cannot rebuild | The committed database keeps working; swap the source behind the generator |
