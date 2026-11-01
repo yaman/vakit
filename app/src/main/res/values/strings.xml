@@ -1,5 +1,4 @@
 <resources>
     <string name="app_name">Vakit</string>
     <string name="complication_label">Vakit</string>
-    <string name="complication_description">Sonraki namaz vakti</string>
 </resources>

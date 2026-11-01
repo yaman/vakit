@@ -252,9 +252,14 @@ dependencies {
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
 
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="true" />
+
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:taskAffinity="">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -2308,7 +2313,6 @@ Add to `app/src/main/res/values/strings.xml`:
 
 ```xml
 <string name="complication_label">Vakit</string>
-<string name="complication_description">Sonraki namaz vakti</string>
 ```
 
 `app/src/main/res/drawable/ic_complication.xml`:
@@ -3193,7 +3197,7 @@ fun StatusRoute() {
                 Intent(
                     Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     Uri.parse("package:${context.packageName}"),
-                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                ),
             )
         },
         onUseGps = {
@@ -3369,7 +3373,8 @@ Add to `AndroidManifest.xml` inside `<application>`:
 ```xml
 <activity
     android:name=".ui.DistrictPickerActivity"
-    android:exported="false" />
+    android:exported="false"
+    android:taskAffinity="" />
 ```
 
 - [ ] **Step 4: Build**
