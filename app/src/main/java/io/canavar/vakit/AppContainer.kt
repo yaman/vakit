@@ -13,6 +13,9 @@ import io.canavar.vakit.domain.DistrictSelector
 import io.canavar.vakit.domain.NextEntry
 import io.canavar.vakit.domain.NextEntryResolver
 import io.canavar.vakit.domain.canonicalMonthDay
+import io.canavar.vakit.location.FusedLocationSource
+import io.canavar.vakit.location.LocationCheck
+import io.canavar.vakit.location.LocationScheduler
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +29,25 @@ class AppContainer(private val context: Context) {
     val resolver = NextEntryResolver()
     val selector = DistrictSelector()
     val complicationRefresher: ComplicationRefresher = ComplicationUpdater(context)
+    val locationCheck: LocationCheck by lazy {
+        LocationCheck(
+            locationSource = FusedLocationSource(context),
+            timetable = timetable,
+            settings = settings,
+            selector = selector,
+            refresher = complicationRefresher,
+        )
+    }
+
+    fun start() {
+        LocationScheduler.ensurePeriodic(context)
+        LocationScheduler.runNow(context)
+        complicationRefresher.requestUpdate()
+    }
+
+    suspend fun scheduleNextBoundary() {
+        // Replaced in Task 10 with the AlarmManager implementation.
+    }
 
     suspend fun nextEntry(districtId: Int): NextEntry? =
         nextEntryAt(districtId, LocalDateTime.now(zone))
