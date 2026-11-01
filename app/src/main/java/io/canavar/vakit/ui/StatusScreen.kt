@@ -10,12 +10,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -27,7 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import io.canavar.vakit.VakitApp
@@ -57,7 +59,9 @@ fun StatusRoute() {
         Manifest.permission.ACCESS_BACKGROUND_LOCATION,
     ) == PackageManager.PERMISSION_GRANTED
 
-    LaunchedEffect(reload) {
+    val storedSettings by container.settings.changes.collectAsState(initial = null)
+
+    LaunchedEffect(reload, storedSettings) {
         state = container.loadStatus(hasLocation, hasBackground)
     }
 
@@ -154,15 +158,35 @@ fun StatusScreen(
             Text("Konum alınamadı")
         }
         Spacer(Modifier.height(8.dp))
-        Button(onClick = onRefreshLocation) { Text("Konumu yenile") }
-        Button(onClick = onPickDistrict) { Text("İlçe seç") }
+        Chip(
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Konumu yenile") },
+            onClick = onRefreshLocation,
+        )
+        Chip(
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("İlçe seç") },
+            onClick = onPickDistrict,
+        )
         if (!state.hasLocationPermission) {
-            Button(onClick = onGrantLocation) { Text("İzin ver") }
+            Chip(
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("İzin ver") },
+                onClick = onGrantLocation,
+            )
         } else if (!state.hasBackgroundPermission) {
-            Button(onClick = onOpenSettings) { Text("Arka plan izni") }
+            Chip(
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Arka plan izni") },
+                onClick = onOpenSettings,
+            )
         }
         if (!state.autoLocation) {
-            Button(onClick = onUseGps) { Text("GPS kullan") }
+            Chip(
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("GPS kullan") },
+                onClick = onUseGps,
+            )
         }
     }
 }

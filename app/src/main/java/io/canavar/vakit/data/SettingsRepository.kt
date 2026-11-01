@@ -11,11 +11,14 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import io.canavar.vakit.domain.District
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 interface SettingsRepository {
+    val changes: Flow<Settings>
     suspend fun read(): Settings
     suspend fun setDistrict(district: District, auto: Boolean)
     suspend fun setFix(fix: LocationFix)
@@ -28,8 +31,11 @@ interface SettingsRepository {
 class DataStoreSettingsRepository(
     private val dataStore: DataStore<Preferences>,
 ) : SettingsRepository {
-    override suspend fun read(): Settings {
-        val values = dataStore.data.first()
+    override val changes: Flow<Settings> = dataStore.data.map { toSettings(it) }
+
+    override suspend fun read(): Settings = changes.first()
+
+    private fun toSettings(values: Preferences): Settings {
         val lat = values[Keys.LAST_LAT]
         val lon = values[Keys.LAST_LON]
         val fix = if (lat != null && lon != null) {

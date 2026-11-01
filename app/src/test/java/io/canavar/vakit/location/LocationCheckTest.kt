@@ -8,6 +8,8 @@ import io.canavar.vakit.data.TimetableRepository
 import io.canavar.vakit.domain.DayTimes
 import io.canavar.vakit.domain.District
 import io.canavar.vakit.domain.DistrictSelector
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -25,6 +27,7 @@ class LocationCheckTest {
         var district: District? = null
         var blocked: Boolean? = null
         var auto: Boolean? = null
+        override val changes: Flow<Settings> = flowOf(current)
         override suspend fun read(): Settings = current
         override suspend fun setDistrict(district: District, auto: Boolean) {
             this.district = district

@@ -246,10 +246,12 @@ The library caps `ShortTextComplicationData.text` at 7 characters (`MAX_TEXT_LEN
 
 `LONG_TEXT`:
 
-- `title = "Sonraki vakit"`
+- `title = "İSTANBUL"` (the selected district name, for location feedback)
 - `text = "İkindi 14:47"`
 - `contentDescription = "Sonraki vakit: İkindi 14:47"`
 - `tapAction` opens `MainActivity`
+
+The district name in the title tells the wearer which timetable is active without opening the app.
 
 Both types use the `ShortTextComplicationData.Builder` and `LongTextComplicationData.Builder` classes. The old `ComplicationData(...)` constructor no longer exists in version 1.3.0.
 

@@ -25,6 +25,7 @@ class NextEntryComplicationService : SuspendingComplicationDataSourceService() {
                 val next = settings.districtId?.let { container.nextEntry(it) }
                 ComplicationRenderer.render(
                     districtId = settings.districtId,
+                    districtName = settings.districtName,
                     next = next,
                     locationBlocked = settings.locationBlocked,
                 )
@@ -33,6 +34,7 @@ class NextEntryComplicationService : SuspendingComplicationDataSourceService() {
             } catch (error: Exception) {
                 ComplicationContent(
                     title = null,
+                    locationLabel = null,
                     text = ComplicationRenderer.NO_DATA,
                     description = ComplicationRenderer.NO_DATA,
                     accessibilityDescription = ComplicationRenderer.NO_DATA,
@@ -58,9 +60,7 @@ class NextEntryComplicationService : SuspendingComplicationDataSourceService() {
                     text = text(content.description),
                     contentDescription = text(content.accessibilityDescription),
                 )
-                    .setTitle(
-                        if (content.title != null) text("Sonraki vakit") else null,
-                    )
+                    .setTitle(content.locationLabel?.let { text(it) })
                     .setTapAction(tapAction)
                     .build()
 

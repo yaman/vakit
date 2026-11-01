@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -71,5 +72,15 @@ class DataStoreSettingsRepositoryTest {
     fun `stores the last check time`() = runTest {
         repository.setLastCheck(456L)
         assertEquals(456L, repository.read().lastCheckAt)
+    }
+
+    @Test
+    fun `changes emits a stored district`() = runTest {
+        repository.setDistrict(
+            District(9206, "ANKARA", "ANKARA", 39.9334, 32.8597),
+            auto = false,
+        )
+        val settings = repository.changes.first { it.districtId == 9206 }
+        assertEquals("ANKARA", settings.districtName)
     }
 }
