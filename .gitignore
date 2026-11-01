@@ -5,3 +5,4 @@ local.properties
 *.iml
 .kotlin/
 scripts/cache/
+__pycache__/
