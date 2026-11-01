@@ -148,8 +148,10 @@ CREATE TABLE times (
 Asset companion: `app/src/main/assets/timetable.version`, a single line:
 
 ```
-v1;year=2026;districts=869;rows=317185;generated=2026-11-01
+v1;year=2026;districts=869;rows=317185;sha256=<first 16 hex characters of the file hash>
 ```
+
+The hash makes the app recopy the database whenever the asset content changes, even if the build date does not.
 
 On first app start, and whenever the version string differs:
 
@@ -235,15 +237,21 @@ Supported types: `SHORT_TEXT` and `LONG_TEXT`.
 
 `SHORT_TEXT`:
 
-- `text = "İkindi 14:47"`
-- `shortTitle = null`
+- `text = "14:47"` (the clock, 5 characters)
+- `title = "İkindi"` (the name, 6 characters or fewer)
+- `contentDescription = "Sonraki vakit: İkindi 14:47"`
 - `tapAction` opens `MainActivity`
+
+The library caps `ShortTextComplicationData.text` at 7 characters (`MAX_TEXT_LENGTH`). The name therefore goes in `title`, which the API documents as expected to be displayed. All five prayer names are 6 characters or fewer.
 
 `LONG_TEXT`:
 
 - `title = "Sonraki vakit"`
 - `text = "İkindi 14:47"`
+- `contentDescription = "Sonraki vakit: İkindi 14:47"`
 - `tapAction` opens `MainActivity`
+
+Both types use the `ShortTextComplicationData.Builder` and `LongTextComplicationData.Builder` classes. The old `ComplicationData(...)` constructor no longer exists in version 1.3.0.
 
 States:
 
@@ -311,7 +319,7 @@ After this setup, everything is automatic: boot, hourly checks, district changes
 - Dependencies:
   - `androidx.wear.compose:compose-material:1.6.1`
   - `androidx.wear.compose:compose-foundation:1.6.1`
-  - `androidx.wear.watchface:watchface-complications-data-source:1.3.0`
+  - `androidx.wear.watchface:watchface-complications-data-source-ktx:1.3.0`
   - `androidx.work:work-runtime-ktx:2.10.1`
   - `androidx.datastore:datastore-preferences:1.1.7`
   - `com.google.android.gms:play-services-location:21.4.0`
