@@ -3158,7 +3158,11 @@ fun StatusRoute() {
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
-        if (granted) LocationScheduler.runNow(context)
+        val coarse = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted || coarse) LocationScheduler.runNow(context)
         reload++
     }
     val pickLauncher = rememberLauncherForActivityResult(
