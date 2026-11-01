@@ -21,6 +21,7 @@ interface SettingsRepository {
     val changes: Flow<Settings>
     suspend fun read(): Settings
     suspend fun setDistrict(district: District, auto: Boolean)
+    suspend fun clearDistrict()
     suspend fun setFix(fix: LocationFix)
     suspend fun setLastCheck(atEpochMs: Long)
     suspend fun setAutoLocation(enabled: Boolean)
@@ -61,6 +62,14 @@ class DataStoreSettingsRepository(
             values[Keys.DISTRICT_NAME] = district.name
             values[Keys.DISTRICT_PROVINCE] = district.province
             values[Keys.AUTO_LOCATION] = auto
+        }
+    }
+
+    override suspend fun clearDistrict() {
+        dataStore.edit { values ->
+            values.remove(Keys.DISTRICT_ID)
+            values.remove(Keys.DISTRICT_NAME)
+            values.remove(Keys.DISTRICT_PROVINCE)
         }
     }
 

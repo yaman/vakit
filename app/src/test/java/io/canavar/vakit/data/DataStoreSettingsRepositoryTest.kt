@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -57,6 +58,19 @@ class DataStoreSettingsRepositoryTest {
         assertEquals(9206, settings.districtId)
         assertEquals("ANKARA", settings.districtName)
         assertFalse(settings.autoLocation)
+    }
+
+    @Test
+    fun `clearing the district removes the stored names`() = runTest {
+        repository.setDistrict(
+            District(9206, "ANKARA", "ANKARA", 39.9334, 32.8597),
+            auto = false,
+        )
+        repository.clearDistrict()
+        val settings = repository.read()
+        assertNull(settings.districtId)
+        assertNull(settings.districtName)
+        assertNull(settings.districtProvince)
     }
 
     @Test

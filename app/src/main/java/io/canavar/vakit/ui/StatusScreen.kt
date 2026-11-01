@@ -113,6 +113,7 @@ fun StatusRoute() {
         onUseGps = {
             scope.launchSafely {
                 container.settings.setAutoLocation(true)
+                container.settings.clearDistrict()
                 LocationScheduler.runNow(context)
                 reload++
             }

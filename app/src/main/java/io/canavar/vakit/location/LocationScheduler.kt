@@ -23,7 +23,7 @@ object LocationScheduler {
     fun runNow(context: Context) {
         WorkManager.getInstance(context).enqueueUniqueWork(
             NOW,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.REPLACE,
             OneTimeWorkRequestBuilder<LocationWorker>().build(),
         )
     }

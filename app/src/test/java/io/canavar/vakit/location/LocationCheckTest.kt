@@ -34,6 +34,13 @@ class LocationCheckTest {
             this.auto = auto
             current = current.copy(districtId = district.id, autoLocation = auto)
         }
+        override suspend fun clearDistrict() {
+            current = current.copy(
+                districtId = null,
+                districtName = null,
+                districtProvince = null,
+            )
+        }
         override suspend fun setFix(fix: LocationFix) {
             current = current.copy(lastFix = fix)
         }
