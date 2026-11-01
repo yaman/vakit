@@ -97,7 +97,7 @@ def _province_coordinate(province, provinces):
     return float(row["latitude"]), float(row["longitude"])
 
 
-def get_json(url, attempts=5):
+def get_json(url, attempts=8):
     for attempt in range(attempts):
         try:
             request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
@@ -105,12 +105,18 @@ def get_json(url, attempts=5):
                 return json.load(response)
         except urllib.error.HTTPError as error:
             if error.code in (429, 500, 502, 503, 504) and attempt < attempts - 1:
-                time.sleep(2 ** attempt)
+                retry_after = error.headers.get("Retry-After")
+                delay = (
+                    int(retry_after)
+                    if retry_after and retry_after.isdigit()
+                    else min(60, 2 ** attempt)
+                )
+                time.sleep(delay)
                 continue
             raise
         except (urllib.error.URLError, TimeoutError):
             if attempt < attempts - 1:
-                time.sleep(2 ** attempt)
+                time.sleep(min(60, 2 ** attempt))
                 continue
             raise
     raise RuntimeError("unreachable")
@@ -324,10 +330,13 @@ def main(argv=None):
 
     times_by_district = {}
     for index, district in enumerate(matched, start=1):
+        cache_path = os.path.join(args.cache_dir, f"{district['id']}.json")
+        cached = os.path.exists(cache_path)
         times_by_district[district["id"]] = fetch_times(district["id"], args.cache_dir)
         if index % 25 == 0:
-            print(f"  fetched {index}/{len(matched)}")
-        time.sleep(1.2)
+            print(f"  fetched {index}/{len(matched)}", flush=True)
+        if not cached:
+            time.sleep(2.0)
 
     records = build_records(matched, times_by_district)
     validate(matched, records)
