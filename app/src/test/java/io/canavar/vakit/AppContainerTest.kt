@@ -1,5 +1,6 @@
 package io.canavar.vakit
 
+import android.app.AlarmManager
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import io.canavar.vakit.domain.Prayer
@@ -9,11 +10,14 @@ import java.time.ZoneId
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowAlarmManager
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -96,5 +100,24 @@ class AppContainerTest {
             LocalDateTime.of(2027, 1, 1, 0, 0).plusMinutes(times.gunes.toLong()),
             next?.prayerAt,
         )
+    }
+
+    @Test
+    fun `no district cancels the reminder alarm`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val alarmManager = context.getSystemService(AlarmManager::class.java)!!
+        ShadowAlarmManager.reset()
+        container.settings.clearDistrict()
+        val district = container.timetable.districts().first()
+        val reminder = container.nextReminderAt(
+            districtId = district.id,
+            now = LocalDateTime.of(2026, 6, 15, 0, 0),
+        )!!
+        container.reminderScheduler.schedule(reminder)
+        assertEquals(1, shadowOf(alarmManager).scheduledAlarms.size)
+
+        container.scheduleNextReminder()
+
+        assertTrue(shadowOf(alarmManager).scheduledAlarms.isEmpty())
     }
 }
