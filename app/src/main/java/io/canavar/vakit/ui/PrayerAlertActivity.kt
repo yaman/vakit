@@ -23,6 +23,7 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import io.canavar.vakit.domain.Prayer
 import io.canavar.vakit.domain.TimeFormat
+import io.canavar.vakit.reminder.GunesAlertService
 import io.canavar.vakit.reminder.PrayerAlertNotifier
 import io.canavar.vakit.reminder.ReminderVibrator
 import java.time.Instant
@@ -39,6 +40,7 @@ class PrayerAlertActivity : ComponentActivity() {
         val prayer = intent.getStringExtra(EXTRA_PRAYER)
             ?.let { runCatching { Prayer.valueOf(it) }.getOrNull() }
         val prayerAt = intent.getLongExtra(EXTRA_PRAYER_AT_EPOCH_MS, 0L)
+        val ongoing = intent.getBooleanExtra(EXTRA_ONGOING, false)
         val time = if (prayerAt > 0L) {
             TimeFormat.hhmm(
                 Instant.ofEpochMilli(prayerAt).atZone(ZONE).toLocalDateTime(),
@@ -48,7 +50,17 @@ class PrayerAlertActivity : ComponentActivity() {
         }
 
         val dismiss = {
-            ReminderVibrator(this).cancel()
+            if (ongoing) {
+                startService(GunesAlertService.stopIntent(this))
+            } else {
+                ReminderVibrator(this).cancel()
+            }
+            finish()
+        }
+        val timeout = {
+            if (!ongoing) {
+                ReminderVibrator(this).cancel()
+            }
             finish()
         }
         setContent {
@@ -57,6 +69,7 @@ class PrayerAlertActivity : ComponentActivity() {
                     prayer = prayer?.displayName ?: "Vakit",
                     time = time,
                     onDismiss = dismiss,
+                    onTimeout = timeout,
                 )
             }
         }
@@ -64,22 +77,27 @@ class PrayerAlertActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        PrayerAlertNotifier(this).cancel()
+        if (!intent.getBooleanExtra(EXTRA_ONGOING, false)) {
+            PrayerAlertNotifier(this).cancel()
+        }
     }
 
     companion object {
         private const val EXTRA_PRAYER = "prayer"
         private const val EXTRA_PRAYER_AT_EPOCH_MS = "prayer_at_epoch_ms"
+        private const val EXTRA_ONGOING = "ongoing"
         private val ZONE: ZoneId = ZoneId.of("Europe/Istanbul")
 
         fun intent(
             context: Context,
             prayer: Prayer,
             prayerAtEpochMs: Long,
+            ongoing: Boolean = false,
         ): Intent = Intent(context, PrayerAlertActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             .putExtra(EXTRA_PRAYER, prayer.name)
             .putExtra(EXTRA_PRAYER_AT_EPOCH_MS, prayerAtEpochMs)
+            .putExtra(EXTRA_ONGOING, ongoing)
     }
 }
 
@@ -88,10 +106,11 @@ private fun AlertScreen(
     prayer: String,
     time: String,
     onDismiss: () -> Unit,
+    onTimeout: () -> Unit,
 ) {
     LaunchedEffect(Unit) {
         delay(30_000L)
-        onDismiss()
+        onTimeout()
     }
     Box(
         modifier = Modifier

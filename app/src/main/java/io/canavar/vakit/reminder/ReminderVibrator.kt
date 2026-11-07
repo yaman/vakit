@@ -22,6 +22,30 @@ class ReminderVibrator(private val context: Context) {
         } else {
             VibrationEffect.createWaveform(timings, -1)
         }
+        play(vibrator, effect)
+    }
+
+    fun vibrateRepeatingGunes() {
+        val vibrator = vibrator() ?: return
+        if (!vibrator.hasVibrator()) return
+        val timings = ReminderPattern.repeatingGunes()
+        val effect = if (vibrator.hasAmplitudeControl()) {
+            VibrationEffect.createWaveform(
+                timings,
+                ReminderPattern.repeatingGunesAmplitudes(),
+                0,
+            )
+        } else {
+            VibrationEffect.createWaveform(timings, 0)
+        }
+        play(vibrator, effect)
+    }
+
+    fun cancel() {
+        vibrator()?.cancel()
+    }
+
+    private fun play(vibrator: Vibrator, effect: VibrationEffect) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val attributes = VibrationAttributes.Builder()
                 .setUsage(VibrationAttributes.USAGE_ALARM)
@@ -38,10 +62,6 @@ class ReminderVibrator(private val context: Context) {
                 AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build(),
             )
         }
-    }
-
-    fun cancel() {
-        vibrator()?.cancel()
     }
 
     private fun vibrator(): Vibrator? =

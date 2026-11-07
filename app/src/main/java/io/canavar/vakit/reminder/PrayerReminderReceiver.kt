@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import io.canavar.vakit.VakitApp
 import io.canavar.vakit.domain.Prayer
 import io.canavar.vakit.ui.PrayerAlertActivity
@@ -25,16 +26,27 @@ class PrayerReminderReceiver : BroadcastReceiver() {
         val shouldVibrate = kind != null && ReminderTimes.shouldVibrate(now, prayerAt)
 
         val pending = goAsync()
+        var gunesServiceStarted = false
         if (prayer != null && kind != null && shouldVibrate) {
-            PrayerAlertNotifier(context).show(prayer, prayerAt)
-            if (Settings.canDrawOverlays(context)) {
-                runCatching {
-                    context.startActivity(
-                        PrayerAlertActivity.intent(context, prayer, prayerAt),
+            if (kind == ReminderKind.GUNES) {
+                gunesServiceStarted = runCatching {
+                    ContextCompat.startForegroundService(
+                        context,
+                        GunesAlertService.startIntent(context, prayer, prayerAt),
                     )
-                }
+                }.isSuccess
             }
-            runCatching { ReminderVibrator(context).vibrate(kind) }
+            if (!gunesServiceStarted) {
+                PrayerAlertNotifier(context).show(prayer, prayerAt)
+                if (Settings.canDrawOverlays(context)) {
+                    runCatching {
+                        context.startActivity(
+                            PrayerAlertActivity.intent(context, prayer, prayerAt),
+                        )
+                    }
+                }
+                runCatching { ReminderVibrator(context).vibrate(kind) }
+            }
         }
         val app = context.applicationContext as VakitApp
         CoroutineScope(Dispatchers.IO).launch {
@@ -48,7 +60,11 @@ class PrayerReminderReceiver : BroadcastReceiver() {
                 } catch (_: Exception) {
                     // The hourly worker or the next prayer-boundary alarm retries.
                 }
-                if (kind != null && shouldVibrate) {
+                if (
+                    kind != null &&
+                    shouldVibrate &&
+                    (kind != ReminderKind.GUNES || !gunesServiceStarted)
+                ) {
                     delay(ReminderPattern.durationMillis(kind))
                 }
             } finally {

@@ -15,7 +15,7 @@ Fifteen minutes before each Diyanet entry:
 | Entry | Vibration |
 | --- | --- |
 | İmsak | none |
-| Güneş | 3 groups of 3 pulses, then 10 pulses (19 total) |
+| Güneş | 3 groups of 3 pulses, then 10 pulses (19 total); looped with 10 s rest for up to 5 minutes, until Kapat |
 | Öğle, İkindi, Akşam, Yatsı | 3 pulses, 1 s pause, 3 more (6 total) |
 
 Success means all of these hold:
@@ -36,6 +36,7 @@ In scope:
 - An `AlarmManager` reminder alarm and broadcast receiver.
 - Vibration patterns for the standard and Güneş reminders.
 - A full-screen prayer alert Activity and a high-priority notification fallback.
+- A foreground service for the five-minute Güneş loop, with an ongoing notification and wake lock.
 - Exact-alarm, notification, and overlay permission detection, with status-screen grant actions.
 - Rescheduling on app open, boot/location work, district change, boundary alarms, and after each reminder.
 - Unit tests and a device checklist.
@@ -64,7 +65,8 @@ Out of scope:
 ### 4.2 Vibration patterns
 
 - Standard pulses are 500 ms on followed by 300 ms off. The standard pattern is three pulses, a 1 s pause, then three more: `[0, 500, 300, 500, 300, 500, 1000, 500, 300, 500, 300, 500]`. It has 6 on-pulses and lasts about 5.2 s.
-- Güneş starts with three groups of three pulses at 250 ms on / 150 ms off, separated by 300 ms pauses. It then plays ten pulses at 300 ms on / 250 ms off. The full pattern has 19 on-pulses and lasts about 9.3 s, staying inside the receiver's 10-second async budget.
+- Güneş starts with three groups of three pulses at 250 ms on / 150 ms off, separated by 300 ms pauses. It then plays ten pulses at 300 ms on / 250 ms off. The full pattern has 19 on-pulses and lasts about 9.3 s.
+- For Güneş only, that pattern is looped with 10 s of silence after it. A foreground service repeats the loop for up to 5 minutes, or until the user taps `Kapat` or dismisses the ongoing notification. The 10 s rest keeps the five-minute alarm tolerable and reduces battery drain.
 - The waveform requests maximum amplitude (255) on each pulse when the vibrator supports amplitude control; otherwise it uses the default amplitude. The watch's own vibration-intensity setting can still scale or cap the result.
 - The vibration uses alarm usage so background delivery is eligible. On API 33 and later it also sets `FLAG_BYPASS_INTERRUPTION_POLICY`. For an unprivileged app that flag is best-effort: the platform may ignore it, and DND behavior still depends on the watch's settings. The device check records what actually happens rather than assuming a bypass.
 - On API 30–32 the vibration uses `AudioAttributes.USAGE_ALARM`. Alarm usage is the best available DND behavior on those versions.
@@ -85,6 +87,8 @@ At each valid reminder:
 2. If the "Display over other apps" permission (`SYSTEM_ALERT_WINDOW`) is granted, try to start `PrayerAlertActivity`. The activity turns the screen on, shows over the lock screen, displays the prayer name and time, and offers a `Kapat` action. It cancels the notification when it opens and stops the vibration when it finishes. It auto-dismisses after 30 seconds.
 3. If the overlay permission is missing or the system blocks the activity, the notification card remains as the fallback.
 4. If the notification permission is missing, the activity can still show when the overlay permission is granted; otherwise only the vibration remains.
+5. For Güneş only, the receiver starts `GunesAlertService` instead of the one-shot path. The service holds an ongoing notification with a `Kapat` action and a delete intent, loops the 9.3 s pattern plus 10 s of rest for up to 5 minutes, starts the full-screen alert, and holds a partial wake lock. The activity's 30 s auto-dismiss does not stop the loop; the notification remains so the user can reopen or close it. `Kapat` or dismissing the notification stops the service, vibration, and notification.
+6. Standard prayers keep the one-shot path: 5.2 s of vibration, a notification fallback, and a 30 s alert.
 
 The notification and activity never add a second vibration. The full-screen activity is a best-effort workaround, not a platform-guaranteed notification style.
 
@@ -138,6 +142,8 @@ fun triggerAtMillis(reminder: Reminder, zone: ZoneId): Long =
 
 The leading `0` is the waveform's initial delay. In a waveform array, index 0 is off, odd indices are on, and even indices after 0 are off. The amplitude array is `255` on every on-pulse and `0` elsewhere.
 
+`ReminderPattern.repeatingGunes()` appends 10,000 ms of silence to the Güneş pattern, and `repeatingGunesAmplitudes()` appends a zero amplitude. The service plays this with repeat index 0 until it is stopped.
+
 ### 5.2 Alarm scheduling
 
 `ReminderScheduler(context, zone)`:
@@ -155,15 +161,18 @@ The leading `0` is the waveform's initial delay. In a waveform array, index 0 is
 `PrayerReminderReceiver`:
 
 1. Reads the prayer name and prayer epoch from the intent.
-2. If the current time is before the prayer instant, posts the alert notification, tries the full-screen activity when overlay access exists, and plays the prayer's pattern through `ReminderVibrator`.
-3. If the extras are missing or invalid, skips the alert and vibration.
-4. Calls `goAsync()` and reschedules the next reminder on `Dispatchers.IO`.
-5. Reschedules from `max(now, prayerAt - 15 minutes) + 5 seconds`, so an alarm that fires early cannot schedule itself again.
-6. Keeps the pending result alive for the pattern duration, then always finishes it.
+2. If the current time is before the prayer instant and the entry is Güneş, starts `GunesAlertService` and lets the service own the notification, activity, vibration, and five-minute loop.
+3. For every other valid prayer, posts the alert notification, tries the full-screen activity when overlay access exists, and plays the one-shot pattern through `ReminderVibrator`.
+4. If the extras are missing or invalid, skips the alert and vibration.
+5. Calls `goAsync()` and reschedules the next reminder on `Dispatchers.IO`.
+6. Reschedules from `max(now, prayerAt - 15 minutes) + 5 seconds`, so an alarm that fires early cannot schedule itself again.
+7. Keeps the pending result alive for the one-shot pattern duration, then always finishes it. The Güneş foreground service owns its own lifetime.
 
-`PrayerAlertNotifier` creates the high-priority silent channel and posts/cancels the prayer notification.
+`PrayerAlertNotifier` creates the high-priority silent channel and posts/cancels both the normal and ongoing notifications.
 
-`PrayerAlertActivity` shows the prayer name and time, wakes the screen, dismisses the notification, and stops the vibration on close.
+`PrayerAlertActivity` shows the prayer name and time, wakes the screen, and dismisses or keeps the notification according to whether the reminder is the ongoing Güneş alert.
+
+`GunesAlertService` is a `specialUse` foreground service. It calls `startForeground` with the ongoing notification, loops the Güneş pattern with 10 s rest, holds a partial wake lock for up to five minutes, starts the full-screen activity, and stops on `Kapat`, notification deletion, or timeout.
 
 `ReminderVibrator` is the only Android vibration adapter:
 
@@ -210,9 +219,12 @@ Manifest additions:
 <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+<uses-permission android:name="android.permission.WAKE_LOCK" />
 ```
 
-The app remains without `INTERNET`.
+`GunesAlertService` declares `android:foregroundServiceType="specialUse"` with the matching special-use subtype property. The foreground-service and wake-lock permissions are normal and need no user grant. The app remains without `INTERNET`.
 
 `StatusUiState` gains:
 
@@ -256,8 +268,12 @@ adb shell pm grant io.canavar.vakit android.permission.POST_NOTIFICATIONS
 | No vibrator | Skip vibration; reschedule. |
 | Notification permission denied | Skip the notification; the overlay activity or vibration can still run. |
 | Overlay permission missing or activity blocked | Leave the notification card as the visible fallback. |
-| Alert activity opens | Cancel the notification and stop the vibration on dismissal. |
+| Alert activity opens | Cancel the notification and stop the vibration on dismissal for standard prayers; keep both for the ongoing Güneş alert. |
 | Both alert permissions missing | Vibration only. |
+| Foreground service start is blocked | Fall back to the one-shot notification/vibration path. |
+| Güneş alert activity auto-dismisses | Keep the service, loop, and ongoing notification running. |
+| User taps Kapat or dismisses the ongoing notification | Stop the service, vibration, and notification. |
+| Five minutes elapse | Stop the service, vibration, and notification automatically. |
 
 ## 8. Testing
 
@@ -279,14 +295,16 @@ JVM unit tests:
 - `ReminderPatternTest`
   - Standard pattern has 6 on-pulses, two 3-pulse groups, and the expected 500/300 timing.
   - Güneş pattern has 19 on-pulses, three 3-pulse groups, and the unchanged 10-pulse group.
-  - The waveform starts with the initial delay and every on-pulse requests amplitude 255.
+  - The Güneş loop appends 10,000 ms of silence and totals 19,300 ms.
+  - Every on-pulse requests amplitude 255.
 - `PrayerAlertNotifierTest`
   - Posts the prayer name and time in a high-importance silent channel.
   - Does not post when notifications are disabled.
   - Cancels the notification.
+  - Builds an ongoing Güneş notification with a stop action.
 - `PrayerReminderReceiverTest`
-  - Standard and Güneş patterns; missing, unknown, past, and İmsak extras.
-  - Posts the alert notification.
+  - Standard pattern and the Güneş foreground-service start; missing, unknown, past, and İmsak extras.
+  - Posts the alert notification for standard prayers.
   - Starts `PrayerAlertActivity` when overlay access exists.
 - `AppContainerTest`
   - `nextReminderAt` resolves a reminder from the bundled database.
@@ -298,16 +316,19 @@ Device checklist:
 1. Install the debug APK and set a district.
 2. Grant exact-alarm, notification, and overlay access through the chips or the adb commands.
 3. Open the app, then run `adb shell dumpsys alarm | grep io.canavar.vakit` and confirm one reminder alarm plus the boundary alarm.
-4. Wait for a reminder and confirm the standard two-group pattern and the full-screen prayer alert.
-5. Confirm `Kapat` stops the vibration and dismisses the alert.
+4. Wait for a standard reminder and confirm the two-group pattern and the full-screen prayer alert.
+5. Confirm `Kapat` stops the standard vibration and dismisses the alert.
 6. Revoke overlay access and confirm the notification card appears instead of the activity.
-7. Confirm the Güneş 3 × 3 + 10 pattern before Güneş.
-8. Confirm no vibration before İmsak.
-9. Reboot before a reminder and confirm the alarm and alert are restored.
-10. Change the district and confirm the alarm time changes.
-11. Revoke exact-alarm access and confirm the reminder still fires approximately.
-12. Leave the watch in Do Not Disturb and record whether the vibration/alert occurs.
-13. Confirm the complication still updates and `INTERNET` is still absent.
+7. Wait for Güneş and confirm the 3 × 3 + 10 pattern starts the foreground service and ongoing notification.
+8. Let the Güneş alert activity auto-dismiss after 30 s; confirm the loop and notification continue.
+9. Tap `Kapat` and confirm the loop, vibration, and ongoing notification stop.
+10. Confirm the loop stops automatically at five minutes if not closed.
+11. Confirm no vibration before İmsak.
+12. Reboot before a reminder and confirm the alarm and alert are restored.
+13. Change the district and confirm the alarm time changes.
+14. Revoke exact-alarm access and confirm the reminder still fires approximately.
+15. Leave the watch in Do Not Disturb and record whether the vibration/alert occurs.
+16. Confirm the complication still updates and `INTERNET` is still absent.
 
 Build verification:
 
@@ -330,23 +351,27 @@ Build verification:
 | Samsung blocks background activity starts or overlay access | The activity may not appear | Notification card remains; document adb appops |
 | Notification permission is off by default on Wear OS 4+ | No fallback card | Status chip, `pm grant` fallback, activity/vibration still possible |
 | Overlay settings screen missing on a Wear OS build | Chip cannot grant access | Open app details; document adb appops |
-| Alert activity and notification both appear | Visual duplication | Activity cancels the notification when it opens |
+| Alert activity and notification both appear | Visual duplication | Activity cancels the standard notification when it opens; the Güneş notification is intentionally ongoing |
+| Five minutes of vibration is battery-heavy and uncomfortable | Battery drain, wrist fatigue | 10 s rest between loops, five-minute cap, visible Kapat/notification stop |
+| Foreground service start is restricted | No five-minute loop | Fall back to the one-shot notification/vibration path |
+| Ongoing notification dismissal does not reach the service | Vibration continues without a visible control | Notification Kapat action and delete intent; test on the watch |
 | Time-zone change | Alarm times use the old schedule | Out of scope; the existing hourly and boundary rescheduling re-arms with the same `Europe/Istanbul` data |
 
 ## 10. Acceptance criteria
 
 1. With a district set, the next non-İmsak entry has one reminder alarm at prayer minus 15 minutes.
 2. Öğle, İkindi, Akşam, and Yatsı vibrate two groups of 3 pulses (6 total) 15 minutes before.
-3. Güneş vibrates three groups of 3 pulses, then 10 pulses, 15 minutes before.
-4. İmsak has no reminder.
-5. A reboot before a reminder restores the reminder.
-6. A district change reschedules the reminder for the new district.
-7. An alarm that fires after the prayer does not vibrate and the following reminder is scheduled.
-8. Without exact-alarm permission the reminder still fires approximately; with permission it is exact.
-9. A valid reminder shows the full-screen prayer alert when overlay access exists, or the notification card otherwise.
-10. `Kapat` stops the vibration and removes the alert.
-11. The app still declares no `INTERNET` permission.
-12. The complication continues to show the next entry as before.
+3. Güneş vibrates three groups of 3 pulses, then 10 pulses, 15 minutes before, and then loops that pattern with 10 s rest for up to five minutes.
+4. The Güneş loop stops early on `Kapat` or ongoing-notification dismissal.
+5. İmsak has no reminder.
+6. A reboot before a reminder restores the reminder.
+7. A district change reschedules the reminder for the new district.
+8. An alarm that fires after the prayer does not vibrate and the following reminder is scheduled.
+9. Without exact-alarm permission the reminder still fires approximately; with permission it is exact.
+10. A valid reminder shows the full-screen prayer alert when overlay access exists, or the notification card otherwise.
+11. `Kapat` stops the standard vibration and removes the standard alert; for Güneş it stops the loop and ongoing notification.
+12. The app still declares no `INTERNET` permission.
+13. The complication continues to show the next entry as before.
 
 ## 11. Future work
 

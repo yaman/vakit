@@ -9,6 +9,7 @@ object ReminderPattern {
     const val GUNES_GROUP_PULSE_MS = 250L
     const val GUNES_GROUP_GAP_MS = 150L
     const val GUNES_GROUP_PAUSE_MS = 300L
+    const val GUNES_REST_MS = 10_000L
     const val MAX_AMPLITUDE = 255
 
     fun forKind(kind: ReminderKind): LongArray = when (kind) {
@@ -29,6 +30,11 @@ object ReminderPattern {
     }
 
     fun durationMillis(kind: ReminderKind): Long = forKind(kind).sum()
+
+    fun repeatingGunes(): LongArray = forKind(ReminderKind.GUNES) + GUNES_REST_MS
+
+    fun repeatingGunesAmplitudes(): IntArray =
+        amplitudesForKind(ReminderKind.GUNES) + 0
 
     fun amplitudesForKind(kind: ReminderKind): IntArray =
         forKind(kind).mapIndexed { index, _ ->

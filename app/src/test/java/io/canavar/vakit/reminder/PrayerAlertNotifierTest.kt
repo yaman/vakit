@@ -1,9 +1,12 @@
 package io.canavar.vakit.reminder
 
+import android.app.Notification
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import io.canavar.vakit.domain.Prayer
+import io.canavar.vakit.ui.PrayerAlertActivity
 import java.time.LocalDateTime
 import java.time.ZoneId
 import org.junit.After
@@ -11,6 +14,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -78,5 +82,32 @@ class PrayerAlertNotifierTest {
         notifier.cancel()
 
         assertNull(shadowOf(manager).getNotification(PrayerAlertNotifier.NOTIFICATION_ID))
+    }
+
+    @Test
+    fun `ongoing notification stays and has a stop action`() {
+        val stopIntent = PendingIntent.getService(
+            context,
+            1,
+            GunesAlertService.stopIntent(context),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val notification = notifier.ongoingNotification(
+            prayer = Prayer.GUNES,
+            prayerAtEpochMs = prayerAt,
+            contentIntent = PrayerAlertActivity.intent(
+                context,
+                Prayer.GUNES,
+                prayerAt,
+                ongoing = true,
+            ),
+            stopIntent = stopIntent,
+        )
+
+        assertTrue(notification.flags and Notification.FLAG_ONGOING_EVENT != 0)
+        assertEquals(1, notification.actions.size)
+        assertEquals("Güneş", shadowOf(notification).getContentTitle().toString())
+        assertEquals("18:02", shadowOf(notification).getContentText().toString())
     }
 }

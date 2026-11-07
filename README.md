@@ -6,6 +6,8 @@ A Wear OS watch-face complication that shows the next Diyanet prayer time on a S
 
 - The complication shows the next entry as a prayer name and clock time, for example `İkindi` and `14:47`.
 - The rotation includes İmsak, Güneş, Öğle, İkindi, Akşam and Yatsı. After Yatsı it shows tomorrow's İmsak.
+- Fifteen minutes before each entry the watch vibrates. Güneş loops its pattern with 10 s of rest for up to five minutes, with an ongoing notification whose `Kapat` action stops it early.
+- A full-screen prayer screen opens when the overlay permission is available; a silent high-priority notification card is the fallback.
 - The app bundles one canonical year of Diyanet times for all 869 Türkiye districts.
 - GPS picks the nearest district. The district changes only when a new one is at least 5 km closer.
 - Location is checked hourly, on boot, on app open and on demand.

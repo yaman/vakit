@@ -43,6 +43,19 @@ class ReminderPatternTest {
     }
 
     @Test
+    fun `gunes loop appends ten seconds of rest`() {
+        val loop = ReminderPattern.repeatingGunes()
+        assertEquals(39, loop.size)
+        assertEquals(10_000L, loop.last())
+        assertEquals(19_300L, loop.sum())
+
+        val amplitudes = ReminderPattern.repeatingGunesAmplitudes()
+        assertEquals(39, amplitudes.size)
+        assertEquals(0, amplitudes.last())
+        assertEquals(19, amplitudes.count { it == 255 })
+    }
+
+    @Test
     fun `amplitudes drive every pulse at maximum`() {
         assertArrayEquals(
             intArrayOf(0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255),

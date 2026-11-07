@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -47,6 +48,40 @@ class PrayerAlertNotifier(private val context: Context) {
             .build()
 
         runCatching { manager.notify(NOTIFICATION_ID, notification) }
+    }
+
+    fun ongoingNotification(
+        prayer: Prayer,
+        prayerAtEpochMs: Long,
+        contentIntent: Intent,
+        stopIntent: PendingIntent,
+    ): Notification {
+        ensureChannel()
+        val time = TimeFormat.hhmm(
+            Instant.ofEpochMilli(prayerAtEpochMs).atZone(zone).toLocalDateTime(),
+        )
+        val contentPendingIntent = PendingIntent.getActivity(
+            context,
+            REQUEST_CODE,
+            contentIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        return NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_complication)
+            .setContentTitle(prayer.displayName)
+            .setContentText(time)
+            .setContentIntent(contentPendingIntent)
+            .setDeleteIntent(stopIntent)
+            .addAction(R.drawable.ic_complication, "Kapat", stopIntent)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .build()
     }
 
     fun cancel() {

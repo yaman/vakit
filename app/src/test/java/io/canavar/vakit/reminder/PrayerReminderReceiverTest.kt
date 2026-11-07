@@ -117,10 +117,13 @@ class PrayerReminderReceiverTest {
     }
 
     @Test
-    fun `gunes uses the long pattern`() {
+    fun `gunes starts the foreground alert service`() {
         send(Prayer.GUNES.name, System.currentTimeMillis() + LEAD_MS)
 
-        awaitVibration(ReminderPattern.forKind(ReminderKind.GUNES))
+        val started = shadowOf(context.applicationContext as android.app.Application)
+            .nextStartedService
+        assertEquals(GunesAlertService::class.java.name, started.component?.className)
+        assertNull(shadowOf(vibrator).pattern)
     }
 
     @Test
