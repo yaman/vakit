@@ -6,9 +6,14 @@ import org.junit.Test
 
 class ReminderPatternTest {
     @Test
-    fun `standard is three pulses`() {
+    fun `standard is two groups of three longer pulses`() {
         assertArrayEquals(
-            longArrayOf(0, 300, 250, 300, 250, 300),
+            longArrayOf(
+                0,
+                500, 300, 500, 300, 500,
+                1_000,
+                500, 300, 500, 300, 500,
+            ),
             ReminderPattern.forKind(ReminderKind.STANDARD),
         )
     }
@@ -29,14 +34,14 @@ class ReminderPatternTest {
 
     @Test
     fun `duration is the sum of the waveform`() {
-        assertEquals(1_400L, ReminderPattern.durationMillis(ReminderKind.STANDARD))
+        assertEquals(5_200L, ReminderPattern.durationMillis(ReminderKind.STANDARD))
         assertEquals(7_450L, ReminderPattern.durationMillis(ReminderKind.GUNES))
     }
 
     @Test
     fun `amplitudes drive every pulse at maximum`() {
         assertArrayEquals(
-            intArrayOf(0, 255, 0, 255, 0, 255),
+            intArrayOf(0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255),
             ReminderPattern.amplitudesForKind(ReminderKind.STANDARD),
         )
 
