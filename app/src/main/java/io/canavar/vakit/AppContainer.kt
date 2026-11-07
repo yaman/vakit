@@ -1,6 +1,8 @@
 package io.canavar.vakit
 
+import android.app.AlarmManager
 import android.content.Context
+import android.os.Build
 import io.canavar.vakit.complication.BoundaryScheduler
 import io.canavar.vakit.core.launchSafely
 import io.canavar.vakit.complication.ComplicationRefresher
@@ -108,8 +110,13 @@ class AppContainer(private val context: Context) {
             autoLocation = current.autoLocation,
             hasLocationPermission = hasLocationPermission,
             hasBackgroundPermission = hasBackgroundPermission,
+            hasExactAlarmPermission = canScheduleExactAlarms(),
         )
     }
+
+    private fun canScheduleExactAlarms(): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            context.getSystemService(AlarmManager::class.java)?.canScheduleExactAlarms() == true
 
     suspend fun nextEntry(districtId: Int): NextEntry? =
         nextEntryAt(districtId, LocalDateTime.now(zone))

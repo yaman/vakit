@@ -40,6 +40,14 @@ adb shell pm grant io.canavar.vakit android.permission.ACCESS_BACKGROUND_LOCATIO
 
 If the background grant fails, open Settings → Apps → Vakit → Permissions → Location and choose "Allow all the time".
 
+Grant exact-alarm access so the 15-minute vibration reminders fire on time:
+
+```bash
+adb shell cmd appops set io.canavar.vakit SCHEDULE_EXACT_ALARM allow
+```
+
+Without it, reminders fall back to inexact alarms and may be delayed.
+
 Open Vakit once. It copies the bundled database, takes a location fix, selects the nearest district and shows today's times. Then long-press the watch face → Customize → choose a complication slot → Vakit.
 
 ## Data

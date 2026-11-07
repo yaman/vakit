@@ -78,6 +78,12 @@ fun StatusRoute() {
     val pickLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { reload++ }
+    val exactAlarmLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        scope.launchSafely { container.scheduleNextReminder() }
+        reload++
+    }
 
     LaunchedEffect(Unit) {
         if (!hasLocation) {
@@ -110,6 +116,22 @@ fun StatusRoute() {
                 ),
             )
         },
+        onGrantExactAlarms = {
+            val intent = Intent(
+                Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                Uri.parse("package:${context.packageName}"),
+            )
+            try {
+                exactAlarmLauncher.launch(intent)
+            } catch (_: Exception) {
+                context.startActivity(
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.parse("package:${context.packageName}"),
+                    ),
+                )
+            }
+        },
         onUseGps = {
             scope.launchSafely {
                 container.settings.setAutoLocation(true)
@@ -128,6 +150,7 @@ fun StatusScreen(
     onPickDistrict: () -> Unit,
     onGrantLocation: () -> Unit,
     onOpenSettings: () -> Unit,
+    onGrantExactAlarms: () -> Unit,
     onUseGps: () -> Unit,
 ) {
     Column(
@@ -180,6 +203,13 @@ fun StatusScreen(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Arka plan izni") },
                 onClick = onOpenSettings,
+            )
+        }
+        if (!state.hasExactAlarmPermission && state.districtName != null) {
+            Chip(
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Tam hatırlatma izni") },
+                onClick = onGrantExactAlarms,
             )
         }
         if (!state.autoLocation) {
