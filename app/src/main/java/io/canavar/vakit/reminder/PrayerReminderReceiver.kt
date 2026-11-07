@@ -35,6 +35,18 @@ class PrayerReminderReceiver : BroadcastReceiver() {
                         GunesAlertService.startIntent(context, prayer, prayerAt),
                     )
                 }.isSuccess
+                if (gunesServiceStarted && Settings.canDrawOverlays(context)) {
+                    runCatching {
+                        context.startActivity(
+                            PrayerAlertActivity.intent(
+                                context,
+                                prayer,
+                                prayerAt,
+                                ongoing = true,
+                            ),
+                        )
+                    }
+                }
             }
             if (!gunesServiceStarted) {
                 PrayerAlertNotifier(context).show(prayer, prayerAt)

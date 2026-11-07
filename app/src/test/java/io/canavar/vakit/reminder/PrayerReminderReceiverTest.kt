@@ -127,6 +127,19 @@ class PrayerReminderReceiverTest {
     }
 
     @Test
+    fun `gunes with overlay starts the service and the alert screen`() {
+        ShadowSettings.setCanDrawOverlays(true)
+
+        send(Prayer.GUNES.name, System.currentTimeMillis() + LEAD_MS)
+
+        val application = context.applicationContext as android.app.Application
+        val service = shadowOf(application).nextStartedService
+        val activity = shadowOf(application).nextStartedActivity
+        assertEquals(GunesAlertService::class.java.name, service.component?.className)
+        assertEquals("io.canavar.vakit.ui.PrayerAlertActivity", activity.component?.className)
+    }
+
+    @Test
     fun `missing extras do not vibrate and still reschedule`() {
         send(prayer = null, prayerAt = 0L)
 
