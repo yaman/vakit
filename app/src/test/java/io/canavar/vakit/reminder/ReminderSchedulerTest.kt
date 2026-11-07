@@ -18,6 +18,7 @@ import org.robolectric.shadows.ShadowAlarmManager
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
+@Suppress("DEPRECATION")
 class ReminderSchedulerTest {
     private val zone = ZoneId.of("Europe/Istanbul")
     private lateinit var context: Context
