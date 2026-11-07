@@ -51,4 +51,50 @@ class AppContainerTest {
         container.timetable.districts()
         assertEquals(true, File(context.filesDir, "timetable.db").exists())
     }
+
+    @Test
+    fun `resolves the next reminder from the bundled database`() = runTest {
+        val district = container.timetable.districts().first()
+        val times = container.timetable.times(district.id, 6, 15)!!
+        val next = container.nextReminderAt(
+            districtId = district.id,
+            now = LocalDateTime.of(2026, 6, 15, 0, 0),
+        )
+        assertEquals(Prayer.GUNES, next?.prayer)
+        assertEquals(
+            LocalDateTime.of(2026, 6, 15, 0, 0).plusMinutes(times.gunes.toLong()),
+            next?.prayerAt,
+        )
+        assertEquals(next?.prayerAt?.minusMinutes(15), next?.at)
+    }
+
+    @Test
+    fun `february 29 uses the february 28 row`() = runTest {
+        val district = container.timetable.districts().first()
+        val times = container.timetable.times(district.id, 2, 28)!!
+        val next = container.nextReminderAt(
+            districtId = district.id,
+            now = LocalDateTime.of(2028, 2, 29, 0, 0),
+        )
+        assertEquals(Prayer.GUNES, next?.prayer)
+        assertEquals(
+            LocalDateTime.of(2028, 2, 29, 0, 0).plusMinutes(times.gunes.toLong()),
+            next?.prayerAt,
+        )
+    }
+
+    @Test
+    fun `december 31 resolves january 1 for tomorrow`() = runTest {
+        val district = container.timetable.districts().first()
+        val times = container.timetable.times(district.id, 1, 1)!!
+        val next = container.nextReminderAt(
+            districtId = district.id,
+            now = LocalDateTime.of(2026, 12, 31, 21, 0),
+        )
+        assertEquals(Prayer.GUNES, next?.prayer)
+        assertEquals(
+            LocalDateTime.of(2027, 1, 1, 0, 0).plusMinutes(times.gunes.toLong()),
+            next?.prayerAt,
+        )
+    }
 }

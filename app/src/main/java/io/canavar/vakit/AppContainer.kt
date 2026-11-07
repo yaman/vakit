@@ -20,6 +20,8 @@ import io.canavar.vakit.domain.canonicalMonthDay
 import io.canavar.vakit.location.FusedLocationSource
 import io.canavar.vakit.location.LocationCheck
 import io.canavar.vakit.location.LocationScheduler
+import io.canavar.vakit.reminder.Reminder
+import io.canavar.vakit.reminder.ReminderPlanner
 import io.canavar.vakit.ui.StatusUiState
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -34,6 +36,7 @@ class AppContainer(private val context: Context) {
     val timetable: TimetableRepository by lazy { SqliteTimetableRepository(db.open()) }
     val settings: SettingsRepository = DataStoreSettingsRepository(context.settingsDataStore)
     val resolver = NextEntryResolver()
+    val reminderPlanner = ReminderPlanner()
     val selector = DistrictSelector()
     val complicationRefresher: ComplicationRefresher = ComplicationUpdater(context)
     val locationCheck: LocationCheck by lazy {
@@ -99,6 +102,27 @@ class AppContainer(private val context: Context) {
             val todayMonthDay = canonicalMonthDay(today)
             val tomorrowMonthDay = canonicalMonthDay(tomorrow)
             resolver.resolve(
+                now = now,
+                today = timetable.times(
+                    districtId,
+                    todayMonthDay.monthValue,
+                    todayMonthDay.dayOfMonth,
+                ),
+                tomorrow = timetable.times(
+                    districtId,
+                    tomorrowMonthDay.monthValue,
+                    tomorrowMonthDay.dayOfMonth,
+                ),
+            )
+        }
+
+    suspend fun nextReminderAt(districtId: Int, now: LocalDateTime): Reminder? =
+        withContext(Dispatchers.IO) {
+            val today = now.toLocalDate()
+            val tomorrow = today.plusDays(1)
+            val todayMonthDay = canonicalMonthDay(today)
+            val tomorrowMonthDay = canonicalMonthDay(tomorrow)
+            reminderPlanner.next(
                 now = now,
                 today = timetable.times(
                     districtId,
