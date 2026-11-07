@@ -35,7 +35,6 @@ class PrayerAlertActivity : ComponentActivity() {
         setShowWhenLocked(true)
         setTurnScreenOn(true)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        PrayerAlertNotifier(this).cancel()
 
         val prayer = intent.getStringExtra(EXTRA_PRAYER)
             ?.let { runCatching { Prayer.valueOf(it) }.getOrNull() }
@@ -48,20 +47,24 @@ class PrayerAlertActivity : ComponentActivity() {
             "--:--"
         }
 
+        val dismiss = {
+            ReminderVibrator(this).cancel()
+            finish()
+        }
         setContent {
             MaterialTheme {
                 AlertScreen(
                     prayer = prayer?.displayName ?: "Vakit",
                     time = time,
-                    onDismiss = { finish() },
+                    onDismiss = dismiss,
                 )
             }
         }
     }
 
-    override fun onDestroy() {
-        ReminderVibrator(this).cancel()
-        super.onDestroy()
+    override fun onResume() {
+        super.onResume()
+        PrayerAlertNotifier(this).cancel()
     }
 
     companion object {
