@@ -69,7 +69,7 @@ fun DistrictPickerRoute() {
                         scope.launchSafely {
                             try {
                                 container.settings.setDistrict(district, auto = false)
-                                container.scheduleNextBoundary()
+                                container.scheduleNextEvents()
                                 container.complicationRefresher.requestUpdate()
                             } finally {
                                 (context as? Activity)?.finish()

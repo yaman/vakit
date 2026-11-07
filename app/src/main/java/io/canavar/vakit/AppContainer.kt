@@ -22,7 +22,9 @@ import io.canavar.vakit.location.LocationCheck
 import io.canavar.vakit.location.LocationScheduler
 import io.canavar.vakit.reminder.Reminder
 import io.canavar.vakit.reminder.ReminderPlanner
+import io.canavar.vakit.reminder.ReminderScheduler
 import io.canavar.vakit.ui.StatusUiState
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -46,21 +48,38 @@ class AppContainer(private val context: Context) {
             settings = settings,
             selector = selector,
             refresher = complicationRefresher,
-            onDistrictChanged = { scheduleNextBoundary() },
+            onDistrictChanged = { scheduleNextEvents() },
         )
     }
     val boundaryScheduler = BoundaryScheduler(context, zone)
+    val reminderScheduler = ReminderScheduler(context, zone)
 
     fun start() {
         LocationScheduler.ensurePeriodic(context)
         LocationScheduler.runNow(context)
         complicationRefresher.requestUpdate()
-        CoroutineScope(Dispatchers.IO).launchSafely { scheduleNextBoundary() }
+        CoroutineScope(Dispatchers.IO).launchSafely { scheduleNextEvents() }
     }
 
     suspend fun scheduleNextBoundary() {
         val districtId = settings.read().districtId ?: return
         boundaryScheduler.schedule(nextEntry(districtId))
+    }
+
+    suspend fun scheduleNextReminder(now: LocalDateTime = LocalDateTime.now(zone)) {
+        val districtId = settings.read().districtId
+        reminderScheduler.schedule(districtId?.let { nextReminderAt(it, now) })
+    }
+
+    suspend fun scheduleNextReminderAfter(epochMs: Long) {
+        scheduleNextReminder(
+            Instant.ofEpochMilli(epochMs).atZone(zone).toLocalDateTime(),
+        )
+    }
+
+    suspend fun scheduleNextEvents() {
+        scheduleNextBoundary()
+        scheduleNextReminder()
     }
 
     suspend fun loadStatus(

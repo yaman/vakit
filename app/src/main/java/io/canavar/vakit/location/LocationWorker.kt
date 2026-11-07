@@ -14,7 +14,7 @@ class LocationWorker(
         val app = applicationContext as VakitApp
         return try {
             app.container.locationCheck.run()
-            app.container.scheduleNextBoundary()
+            app.container.scheduleNextEvents()
             Result.success()
         } catch (error: CancellationException) {
             throw error

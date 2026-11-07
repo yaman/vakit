@@ -15,7 +15,7 @@ class PrayerBoundaryReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 app.container.complicationRefresher.requestUpdate()
-                app.container.scheduleNextBoundary()
+                app.container.scheduleNextEvents()
             } catch (error: Exception) {
                 // The next hourly worker retries the schedule.
             } finally {
