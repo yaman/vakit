@@ -15,4 +15,6 @@ data class StatusUiState(
     val hasLocationPermission: Boolean,
     val hasBackgroundPermission: Boolean,
     val hasExactAlarmPermission: Boolean,
+    val hasNotificationPermission: Boolean,
+    val hasOverlayPermission: Boolean,
 )

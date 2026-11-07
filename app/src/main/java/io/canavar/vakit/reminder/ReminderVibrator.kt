@@ -40,6 +40,10 @@ class ReminderVibrator(private val context: Context) {
         }
     }
 
+    fun cancel() {
+        vibrator()?.cancel()
+    }
+
     private fun vibrator(): Vibrator? =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             context.getSystemService(VibratorManager::class.java)?.defaultVibrator

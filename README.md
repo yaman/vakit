@@ -48,6 +48,13 @@ adb shell cmd appops set io.canavar.vakit SCHEDULE_EXACT_ALARM allow
 
 Without it, reminders fall back to inexact alarms and may be delayed.
 
+Wear OS does not support full-screen intent notifications. The app tries to show a full-screen prayer activity using the "Display over other apps" special access, and falls back to a high-priority notification card. Grant both if the Settings screens are unavailable:
+
+```bash
+adb shell appops set io.canavar.vakit SYSTEM_ALERT_WINDOW allow
+adb shell pm grant io.canavar.vakit android.permission.POST_NOTIFICATIONS
+```
+
 Open Vakit once. It copies the bundled database, takes a location fix, selects the nearest district and shows today's times. Then long-press the watch face → Customize → choose a complication slot → Vakit.
 
 ## Data

@@ -26,6 +26,7 @@ Success means all of these hold:
 4. An alarm that is delayed past the prayer time does not vibrate.
 5. The app still declares no `INTERNET` permission.
 6. The existing complication behavior is unchanged.
+7. At each reminder, the watch tries to show a full-screen prayer alert and always leaves a notification card as fallback.
 
 ## 3. Scope
 
@@ -34,14 +35,15 @@ In scope:
 - A pure reminder planner for the 15-minute lead time.
 - An `AlarmManager` reminder alarm and broadcast receiver.
 - Vibration patterns for the standard and Güneş reminders.
-- Exact-alarm permission detection, an inexact fallback, and a status-screen grant action.
+- A full-screen prayer alert Activity and a high-priority notification fallback.
+- Exact-alarm, notification, and overlay permission detection, with status-screen grant actions.
 - Rescheduling on app open, boot/location work, district change, boundary alarms, and after each reminder.
 - Unit tests and a device checklist.
-- README setup notes for the exact-alarm permission.
+- README setup notes for the exact-alarm, notification, and overlay permissions.
 
 Out of scope:
 
-- Notifications, sound, or a notification channel.
+- Adhan sound or custom notification sounds.
 - A per-prayer on/off setting or a global reminder setting.
 - A reminder for İmsak.
 - Snooze or catch-up vibration after a missed reminder.
@@ -73,14 +75,27 @@ Out of scope:
 
 The alarm carries the prayer instant as an extra. If the receiver runs at or after that instant, it does not vibrate. It still schedules the next reminder. This covers Doze delays in the inexact fallback.
 
+### 4.4 Prayer alert
+
+Wear OS does not support full-screen intent notifications (`setFullScreenIntent()`) or `USE_FULL_SCREEN_INTENT`. The app does not rely on them.
+
+At each valid reminder:
+
+1. Post a high-priority notification with the prayer name and time. The channel is silent and has vibration disabled; the custom vibration remains the only haptic.
+2. If the "Display over other apps" permission (`SYSTEM_ALERT_WINDOW`) is granted, try to start `PrayerAlertActivity`. The activity turns the screen on, shows over the lock screen, displays the prayer name and time, and offers a `Kapat` action. It cancels the notification when it opens and stops the vibration when it finishes. It auto-dismisses after 30 seconds.
+3. If the overlay permission is missing or the system blocks the activity, the notification card remains as the fallback.
+4. If the notification permission is missing, the activity can still show when the overlay permission is granted; otherwise only the vibration remains.
+
+The notification and activity never add a second vibration. The full-screen activity is a best-effort workaround, not a platform-guaranteed notification style.
+
 ## 5. Architecture
 
 ### 5.1 Domain
 
 `ReminderKind` is an enum with:
 
-- `STANDARD` — three pulses.
-- `GUNES` — three pulses, pause, ten pulses.
+- `STANDARD` — two groups of three longer pulses.
+- `GUNES` — three groups of three pulses, then ten pulses.
 
 `Reminder` holds:
 
@@ -118,10 +133,10 @@ fun triggerAtMillis(reminder: Reminder, zone: ZoneId): Long =
 
 `ReminderPattern` builds the waveform as a pure `LongArray` so it is testable without Android:
 
-- Standard: initial `0`, then three `300, 250` pairs with the final `250` omitted.
-- Güneş: the standard three-pulse body, then `800`, then ten `300, 250` pairs with the final `250` omitted.
+- Standard: `[0, 500, 300, 500, 300, 500, 1000, 500, 300, 500, 300, 500]` — 6 on-pulses, about 5.2 s.
+- Güneş: three groups of `250, 150, 250, 150, 250` with `300` pauses, then `300, 250` ten times — 19 on-pulses, about 9.3 s.
 
-The leading `0` is the waveform's initial delay. In a waveform array, index 0 is off, odd indices are on, and even indices after 0 are off.
+The leading `0` is the waveform's initial delay. In a waveform array, index 0 is off, odd indices are on, and even indices after 0 are off. The amplitude array is `255` on every on-pulse and `0` elsewhere.
 
 ### 5.2 Alarm scheduling
 
@@ -140,11 +155,15 @@ The leading `0` is the waveform's initial delay. In a waveform array, index 0 is
 `PrayerReminderReceiver`:
 
 1. Reads the prayer name and prayer epoch from the intent.
-2. If the current time is before the prayer instant, plays the prayer's pattern through `ReminderVibrator`.
-3. If the extras are missing or invalid, skips vibration.
+2. If the current time is before the prayer instant, posts the alert notification, tries the full-screen activity when overlay access exists, and plays the prayer's pattern through `ReminderVibrator`.
+3. If the extras are missing or invalid, skips the alert and vibration.
 4. Calls `goAsync()` and reschedules the next reminder on `Dispatchers.IO`.
 5. Reschedules from `max(now, prayerAt - 15 minutes) + 5 seconds`, so an alarm that fires early cannot schedule itself again.
-6. Always finishes the pending result.
+6. Keeps the pending result alive for the pattern duration, then always finishes it.
+
+`PrayerAlertNotifier` creates the high-priority silent channel and posts/cancels the prayer notification.
+
+`PrayerAlertActivity` shows the prayer name and time, wakes the screen, dismisses the notification, and stops the vibration on close.
 
 `ReminderVibrator` is the only Android vibration adapter:
 
@@ -152,6 +171,7 @@ The leading `0` is the waveform's initial delay. In a waveform array, index 0 is
 - Checks `hasVibrator()`.
 - API 33 and later: `Vibrator.vibrate(effect, VibrationAttributes)` with `USAGE_ALARM` and `FLAG_BYPASS_INTERRUPTION_POLICY`.
 - API 30–32: `Vibrator.vibrate(effect, AudioAttributes)` with `USAGE_ALARM`.
+- `cancel()` stops the pattern when the alert is dismissed.
 
 ### 5.3 Container and wiring
 
@@ -188,28 +208,36 @@ Manifest additions:
 ```xml
 <uses-permission android:name="android.permission.VIBRATE" />
 <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 ```
 
-No notification permission is added. The app remains without `INTERNET`.
+The app remains without `INTERNET`.
 
-`StatusUiState` gains `hasExactAlarmPermission: Boolean`. `AppContainer.loadStatus` computes it:
+`StatusUiState` gains:
 
-- API 30: true.
-- API 31 and later: `AlarmManager.canScheduleExactAlarms()`.
+- `hasExactAlarmPermission`
+- `hasNotificationPermission`
+- `hasOverlayPermission`
 
-`StatusScreen` gains an `onGrantExactAlarms` action and shows a `Tam hatırlatma izni` chip when:
+`AppContainer.loadStatus` computes them from `AlarmManager.canScheduleExactAlarms()`, `NotificationManagerCompat.areNotificationsEnabled()`, and `Settings.canDrawOverlays()`.
 
-- a district is set (`state.districtName != null`), and
-- `hasExactAlarmPermission` is false.
+`StatusScreen` shows grant actions when a district is set:
 
-The chip opens `Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM` with the package URI through an activity-result launcher. If the settings activity is unavailable, it falls back to the app details screen. On return it calls `scheduleNextReminder()` and reloads the status.
+- `Tam hatırlatma izni` when exact alarms are unavailable.
+- `Bildirim izni` on API 33+ when notifications are disabled.
+- `Ekran üstü izni` when overlay access is unavailable.
 
-If the permission is granted or revoked outside the app, the next app open, hourly worker, or prayer-boundary alarm reschedules the reminder. Exact alarms are canceled by the system when the permission is revoked.
+The exact-alarm action opens `Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM`. The notification action requests `POST_NOTIFICATIONS`. The overlay action opens `Settings.ACTION_MANAGE_OVERLAY_PERMISSION` and falls back to app details. Every launcher reloads the status on return; the exact-alarm launcher also reschedules the reminder.
 
-README gains the adb fallback:
+If the permissions are granted or revoked outside the app, the next app open, hourly worker, or prayer-boundary alarm reschedules the reminder. Exact alarms are canceled by the system when the permission is revoked.
+
+README gains adb fallbacks:
 
 ```bash
 adb shell cmd appops set io.canavar.vakit SCHEDULE_EXACT_ALARM allow
+adb shell appops set io.canavar.vakit SYSTEM_ALERT_WINDOW allow
+adb shell pm grant io.canavar.vakit android.permission.POST_NOTIFICATIONS
 ```
 
 ## 7. Error handling
@@ -226,6 +254,10 @@ adb shell cmd appops set io.canavar.vakit SCHEDULE_EXACT_ALARM allow
 | Alarm fires at or after prayer | Skip vibration; reschedule. |
 | Reschedule fails | Hourly worker and boundary alarm retry. |
 | No vibrator | Skip vibration; reschedule. |
+| Notification permission denied | Skip the notification; the overlay activity or vibration can still run. |
+| Overlay permission missing or activity blocked | Leave the notification card as the visible fallback. |
+| Alert activity opens | Cancel the notification and stop the vibration on dismissal. |
+| Both alert permissions missing | Vibration only. |
 
 ## 8. Testing
 
@@ -245,9 +277,17 @@ JVM unit tests:
   - Trigger is exactly 15 minutes before the prayer.
   - The epoch conversion uses `Europe/Istanbul`.
 - `ReminderPatternTest`
-  - Standard pattern has 3 on-pulses and the expected 300/250 timing.
-  - Güneş pattern has 13 on-pulses, an 800 ms pause, and the expected length.
-  - The waveform starts with the initial delay.
+  - Standard pattern has 6 on-pulses, two 3-pulse groups, and the expected 500/300 timing.
+  - Güneş pattern has 19 on-pulses, three 3-pulse groups, and the unchanged 10-pulse group.
+  - The waveform starts with the initial delay and every on-pulse requests amplitude 255.
+- `PrayerAlertNotifierTest`
+  - Posts the prayer name and time in a high-importance silent channel.
+  - Does not post when notifications are disabled.
+  - Cancels the notification.
+- `PrayerReminderReceiverTest`
+  - Standard and Güneş patterns; missing, unknown, past, and İmsak extras.
+  - Posts the alert notification.
+  - Starts `PrayerAlertActivity` when overlay access exists.
 - `AppContainerTest`
   - `nextReminderAt` resolves a reminder from the bundled database.
   - The reminder is 15 minutes before the resolved prayer.
@@ -256,16 +296,18 @@ JVM unit tests:
 Device checklist:
 
 1. Install the debug APK and set a district.
-2. Grant exact-alarm access through the chip or the adb command.
+2. Grant exact-alarm, notification, and overlay access through the chips or the adb commands.
 3. Open the app, then run `adb shell dumpsys alarm | grep io.canavar.vakit` and confirm one reminder alarm plus the boundary alarm.
-4. Wait for a reminder and confirm the 3-pulse pattern for a standard prayer.
-5. Confirm the 3 + 10 pattern before Güneş.
-6. Confirm no vibration before İmsak.
-7. Reboot before a reminder and confirm the alarm is restored.
-8. Change the district and confirm the alarm time changes.
-9. Revoke exact-alarm access and confirm the reminder still fires approximately.
-10. Leave the watch in Do Not Disturb and record whether the vibration occurs. Alarm usage keeps it eligible, but the bypass flag is not guaranteed for an unprivileged app.
-11. Confirm the complication still updates and `INTERNET` is still absent.
+4. Wait for a reminder and confirm the standard two-group pattern and the full-screen prayer alert.
+5. Confirm `Kapat` stops the vibration and dismisses the alert.
+6. Revoke overlay access and confirm the notification card appears instead of the activity.
+7. Confirm the Güneş 3 × 3 + 10 pattern before Güneş.
+8. Confirm no vibration before İmsak.
+9. Reboot before a reminder and confirm the alarm and alert are restored.
+10. Change the district and confirm the alarm time changes.
+11. Revoke exact-alarm access and confirm the reminder still fires approximately.
+12. Leave the watch in Do Not Disturb and record whether the vibration/alert occurs.
+13. Confirm the complication still updates and `INTERNET` is still absent.
 
 Build verification:
 
@@ -283,7 +325,12 @@ Build verification:
 | Samsung Bedtime/theater mode suppresses vibration | No physical vibration | Platform limitation; cannot bypass from the app |
 | Exact-alarm settings screen missing on a Wear OS build | Chip cannot grant access | Open app details; document adb appops |
 | Background vibration ignored by the platform | No vibration | Use alarm usage and bypass flag; device test required |
-| Watch face/other alarm interference | Vibration feels different | Accepted; no sound or notification is added |
+| Watch face/other alarm interference | Vibration feels different | Accepted; no sound is added |
+| Wear OS has no full-screen intent notifications | Cannot take over the screen via the standard API | Use the overlay activity workaround plus a notification fallback |
+| Samsung blocks background activity starts or overlay access | The activity may not appear | Notification card remains; document adb appops |
+| Notification permission is off by default on Wear OS 4+ | No fallback card | Status chip, `pm grant` fallback, activity/vibration still possible |
+| Overlay settings screen missing on a Wear OS build | Chip cannot grant access | Open app details; document adb appops |
+| Alert activity and notification both appear | Visual duplication | Activity cancels the notification when it opens |
 | Time-zone change | Alarm times use the old schedule | Out of scope; the existing hourly and boundary rescheduling re-arms with the same `Europe/Istanbul` data |
 
 ## 10. Acceptance criteria
@@ -296,13 +343,14 @@ Build verification:
 6. A district change reschedules the reminder for the new district.
 7. An alarm that fires after the prayer does not vibrate and the following reminder is scheduled.
 8. Without exact-alarm permission the reminder still fires approximately; with permission it is exact.
-9. The app still declares no `INTERNET` permission.
-10. The complication continues to show the next entry as before.
+9. A valid reminder shows the full-screen prayer alert when overlay access exists, or the notification card otherwise.
+10. `Kapat` stops the vibration and removes the alert.
+11. The app still declares no `INTERNET` permission.
+12. The complication continues to show the next entry as before.
 
 ## 11. Future work
 
-- A notification or full-screen cue naming the prayer.
 - Per-prayer or global reminder toggles.
-- Adhan sound.
+- Adhan sound or custom notification sounds.
 - Snooze or catch-up behavior.
 - Rescheduling automatically when the exact-alarm permission is granted outside the app.

@@ -3,6 +3,8 @@ package io.canavar.vakit
 import android.app.AlarmManager
 import android.content.Context
 import android.os.Build
+import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 import io.canavar.vakit.complication.BoundaryScheduler
 import io.canavar.vakit.core.launchSafely
 import io.canavar.vakit.core.runSafely
@@ -113,6 +115,9 @@ class AppContainer(private val context: Context) {
             hasLocationPermission = hasLocationPermission,
             hasBackgroundPermission = hasBackgroundPermission,
             hasExactAlarmPermission = canScheduleExactAlarms(),
+            hasNotificationPermission = NotificationManagerCompat.from(context)
+                .areNotificationsEnabled(),
+            hasOverlayPermission = Settings.canDrawOverlays(context),
         )
     }
 

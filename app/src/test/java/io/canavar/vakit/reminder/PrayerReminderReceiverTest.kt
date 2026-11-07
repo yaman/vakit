@@ -1,6 +1,7 @@
 package io.canavar.vakit.reminder
 
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -14,6 +15,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -23,6 +25,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowAlarmManager
+import org.robolectric.shadows.ShadowNotificationManager
+import org.robolectric.shadows.ShadowSettings
 import org.robolectric.shadows.ShadowVibrator
 
 @RunWith(RobolectricTestRunner::class)
@@ -37,6 +41,7 @@ class PrayerReminderReceiverTest {
     private lateinit var container: VakitApp
     private lateinit var receiver: PrayerReminderReceiver
     private lateinit var alarmManager: AlarmManager
+    private lateinit var notificationManager: NotificationManager
     private lateinit var vibrator: Vibrator
 
     @Before
@@ -47,8 +52,12 @@ class PrayerReminderReceiverTest {
         val district = app.container.timetable.districts().first()
         runBlocking { app.container.settings.setDistrict(district, auto = false) }
         alarmManager = context.getSystemService(AlarmManager::class.java)
+        notificationManager = context.getSystemService(NotificationManager::class.java)
         vibrator = context.getSystemService(VibratorManager::class.java).defaultVibrator
         ShadowAlarmManager.reset()
+        ShadowNotificationManager.reset()
+        shadowOf(notificationManager).setNotificationsEnabled(true)
+        ShadowSettings.setCanDrawOverlays(false)
         ShadowVibrator.reset()
         shadowOf(vibrator).setHasVibrator(true)
         receiver = PrayerReminderReceiver()
@@ -64,6 +73,8 @@ class PrayerReminderReceiverTest {
         context.unregisterReceiver(receiver)
         runBlocking { (context.applicationContext as VakitApp).container.settings.clearDistrict() }
         ShadowAlarmManager.reset()
+        ShadowNotificationManager.reset()
+        ShadowSettings.setCanDrawOverlays(false)
         ShadowVibrator.reset()
     }
 
@@ -84,6 +95,25 @@ class PrayerReminderReceiverTest {
 
         awaitVibration(ReminderPattern.forKind(ReminderKind.STANDARD))
         assertTrue(shadowOf(alarmManager).scheduledAlarms.isNotEmpty())
+        assertNotNull(
+            shadowOf(notificationManager).getNotification(
+                PrayerAlertNotifier.NOTIFICATION_ID,
+            ),
+        )
+    }
+
+    @Test
+    fun `overlay permission starts the full-screen alert`() {
+        ShadowSettings.setCanDrawOverlays(true)
+
+        send(Prayer.IKINDI.name, System.currentTimeMillis() + LEAD_MS)
+
+        val started = shadowOf(context.applicationContext as android.app.Application)
+            .nextStartedActivity
+        assertEquals(
+            "io.canavar.vakit.ui.PrayerAlertActivity",
+            started.component?.className,
+        )
     }
 
     @Test

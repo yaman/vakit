@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -84,6 +85,12 @@ fun StatusRoute() {
         scope.launchSafely { container.scheduleNextReminder() }
         reload++
     }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { reload++ }
+    val overlayLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { reload++ }
 
     LaunchedEffect(Unit) {
         if (!hasLocation) {
@@ -134,6 +141,29 @@ fun StatusRoute() {
                 }
             }
         },
+        onGrantNotifications = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        },
+        onGrantOverlay = {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:${context.packageName}"),
+            )
+            try {
+                overlayLauncher.launch(intent)
+            } catch (_: Exception) {
+                runCatching {
+                    overlayLauncher.launch(
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:${context.packageName}"),
+                        ),
+                    )
+                }
+            }
+        },
         onUseGps = {
             scope.launchSafely {
                 container.settings.setAutoLocation(true)
@@ -154,6 +184,8 @@ fun StatusScreen(
     onGrantLocation: () -> Unit,
     onOpenSettings: () -> Unit,
     onGrantExactAlarms: () -> Unit,
+    onGrantNotifications: () -> Unit,
+    onGrantOverlay: () -> Unit,
     onUseGps: () -> Unit,
 ) {
     Column(
@@ -213,6 +245,24 @@ fun StatusScreen(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Tam hatırlatma izni") },
                 onClick = onGrantExactAlarms,
+            )
+        }
+        if (
+            state.districtName != null &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !state.hasNotificationPermission
+        ) {
+            Chip(
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Bildirim izni") },
+                onClick = onGrantNotifications,
+            )
+        }
+        if (!state.hasOverlayPermission && state.districtName != null) {
+            Chip(
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Ekran üstü izni") },
+                onClick = onGrantOverlay,
             )
         }
         if (!state.autoLocation) {

@@ -3,8 +3,10 @@ package io.canavar.vakit.reminder
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.provider.Settings
 import io.canavar.vakit.VakitApp
 import io.canavar.vakit.domain.Prayer
+import io.canavar.vakit.ui.PrayerAlertActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,12 +25,20 @@ class PrayerReminderReceiver : BroadcastReceiver() {
         val shouldVibrate = kind != null && ReminderTimes.shouldVibrate(now, prayerAt)
 
         val pending = goAsync()
+        if (prayer != null && kind != null && shouldVibrate) {
+            PrayerAlertNotifier(context).show(prayer, prayerAt)
+            if (Settings.canDrawOverlays(context)) {
+                runCatching {
+                    context.startActivity(
+                        PrayerAlertActivity.intent(context, prayer, prayerAt),
+                    )
+                }
+            }
+            runCatching { ReminderVibrator(context).vibrate(kind) }
+        }
         val app = context.applicationContext as VakitApp
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                if (kind != null && shouldVibrate) {
-                    runCatching { ReminderVibrator(context).vibrate(kind) }
-                }
                 try {
                     app.container.scheduleNextReminderAfter(
                         ReminderTimes.resumeAtMillis(now, prayerAt),
