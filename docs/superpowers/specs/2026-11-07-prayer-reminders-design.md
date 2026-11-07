@@ -1,7 +1,7 @@
 # Vakit — Prayer Vibration Reminders
 
 Date: 2026-11-07
-Status: Draft for review
+Status: Approved design
 Target device: Samsung Galaxy Watch 4 (SM-R890), Wear OS 6, Android 16 (API 36)
 
 ## 1. Problem
