@@ -15,7 +15,7 @@ Fifteen minutes before each Diyanet entry:
 | Entry | Vibration |
 | --- | --- |
 | İmsak | none |
-| Güneş | 3 pulses, a pause, then 10 pulses |
+| Güneş | 3 groups of 3 pulses, then 10 pulses (19 total) |
 | Öğle, İkindi, Akşam, Yatsı | 3 pulses, 1 s pause, 3 more (6 total) |
 
 Success means all of these hold:
@@ -61,9 +61,8 @@ Out of scope:
 
 ### 4.2 Vibration patterns
 
-- Standard pulses are 500 ms on followed by 300 ms off. Güneş pulses are 300 ms on followed by 250 ms off.
-- The standard pattern is three pulses, a 1 s pause, then three more: `[0, 500, 300, 500, 300, 500, 1000, 500, 300, 500, 300, 500]`. It has 6 on-pulses and lasts about 5.2 s.
-- The Güneş pattern is three 300 ms pulses, an 800 ms pause, then ten 300 ms pulses. It has 13 on-pulses and lasts about 7.45 s.
+- Standard pulses are 500 ms on followed by 300 ms off. The standard pattern is three pulses, a 1 s pause, then three more: `[0, 500, 300, 500, 300, 500, 1000, 500, 300, 500, 300, 500]`. It has 6 on-pulses and lasts about 5.2 s.
+- Güneş starts with three groups of three pulses at 250 ms on / 150 ms off, separated by 300 ms pauses. It then plays ten pulses at 300 ms on / 250 ms off. The full pattern has 19 on-pulses and lasts about 9.3 s, staying inside the receiver's 10-second async budget.
 - The waveform requests maximum amplitude (255) on each pulse when the vibrator supports amplitude control; otherwise it uses the default amplitude. The watch's own vibration-intensity setting can still scale or cap the result.
 - The vibration uses alarm usage so background delivery is eligible. On API 33 and later it also sets `FLAG_BYPASS_INTERRUPTION_POLICY`. For an unprivileged app that flag is best-effort: the platform may ignore it, and DND behavior still depends on the watch's settings. The device check records what actually happens rather than assuming a bypass.
 - On API 30–32 the vibration uses `AudioAttributes.USAGE_ALARM`. Alarm usage is the best available DND behavior on those versions.
@@ -291,7 +290,7 @@ Build verification:
 
 1. With a district set, the next non-İmsak entry has one reminder alarm at prayer minus 15 minutes.
 2. Öğle, İkindi, Akşam, and Yatsı vibrate two groups of 3 pulses (6 total) 15 minutes before.
-3. Güneş vibrates 3 pulses, pauses, then vibrates 10 pulses 15 minutes before.
+3. Güneş vibrates three groups of 3 pulses, then 10 pulses, 15 minutes before.
 4. İmsak has no reminder.
 5. A reboot before a reminder restores the reminder.
 6. A district change reschedules the reminder for the new district.

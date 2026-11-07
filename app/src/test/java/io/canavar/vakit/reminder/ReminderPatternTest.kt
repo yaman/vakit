@@ -19,12 +19,16 @@ class ReminderPatternTest {
     }
 
     @Test
-    fun `gunes is three pulses paused then ten`() {
+    fun `gunes is three groups of three then ten`() {
         assertArrayEquals(
             longArrayOf(
                 0,
-                300, 250, 300, 250, 300,
-                800,
+                250, 150, 250, 150, 250,
+                300,
+                250, 150, 250, 150, 250,
+                300,
+                250, 150, 250, 150, 250,
+                300,
                 300, 250, 300, 250, 300, 250, 300, 250, 300, 250,
                 300, 250, 300, 250, 300, 250, 300, 250, 300,
             ),
@@ -35,7 +39,7 @@ class ReminderPatternTest {
     @Test
     fun `duration is the sum of the waveform`() {
         assertEquals(5_200L, ReminderPattern.durationMillis(ReminderKind.STANDARD))
-        assertEquals(7_450L, ReminderPattern.durationMillis(ReminderKind.GUNES))
+        assertEquals(9_300L, ReminderPattern.durationMillis(ReminderKind.GUNES))
     }
 
     @Test
@@ -46,11 +50,14 @@ class ReminderPatternTest {
         )
 
         val gunes = ReminderPattern.amplitudesForKind(ReminderKind.GUNES)
-        assertEquals(26, gunes.size)
+        assertEquals(38, gunes.size)
         assertEquals(0, gunes[0])
         assertEquals(255, gunes[1])
         assertEquals(0, gunes[6])
-        assertEquals(255, gunes[25])
-        assertEquals(13, gunes.count { it == 255 })
+        assertEquals(255, gunes[7])
+        assertEquals(0, gunes[18])
+        assertEquals(255, gunes[19])
+        assertEquals(255, gunes[37])
+        assertEquals(19, gunes.count { it == 255 })
     }
 }
