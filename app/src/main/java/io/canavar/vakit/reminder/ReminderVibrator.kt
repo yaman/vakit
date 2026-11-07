@@ -12,7 +12,16 @@ class ReminderVibrator(private val context: Context) {
     fun vibrate(kind: ReminderKind) {
         val vibrator = vibrator() ?: return
         if (!vibrator.hasVibrator()) return
-        val effect = VibrationEffect.createWaveform(ReminderPattern.forKind(kind), -1)
+        val timings = ReminderPattern.forKind(kind)
+        val effect = if (vibrator.hasAmplitudeControl()) {
+            VibrationEffect.createWaveform(
+                timings,
+                ReminderPattern.amplitudesForKind(kind),
+                -1,
+            )
+        } else {
+            VibrationEffect.createWaveform(timings, -1)
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val attributes = VibrationAttributes.Builder()
                 .setUsage(VibrationAttributes.USAGE_ALARM)

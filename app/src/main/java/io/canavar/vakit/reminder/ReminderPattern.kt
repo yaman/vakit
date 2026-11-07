@@ -4,6 +4,7 @@ object ReminderPattern {
     const val PULSE_MS = 300L
     const val GAP_MS = 250L
     const val GROUP_GAP_MS = 800L
+    const val MAX_AMPLITUDE = 255
 
     fun forKind(kind: ReminderKind): LongArray = when (kind) {
         ReminderKind.STANDARD -> waveform(pulses(3))
@@ -11,6 +12,11 @@ object ReminderPattern {
     }
 
     fun durationMillis(kind: ReminderKind): Long = forKind(kind).sum()
+
+    fun amplitudesForKind(kind: ReminderKind): IntArray =
+        forKind(kind).mapIndexed { index, _ ->
+            if (index == 0 || index % 2 == 0) 0 else MAX_AMPLITUDE
+        }.toIntArray()
 
     private fun pulses(count: Int): List<Long> = buildList {
         repeat(count) { index ->

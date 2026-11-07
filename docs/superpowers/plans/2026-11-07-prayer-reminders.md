@@ -536,7 +536,7 @@ Expected: PASS, 2 tests.
 
 - Resolve `VibratorManager.defaultVibrator` on API 31+ and `Vibrator` on API 30.
 - Return when the service is null or `!hasVibrator()`.
-- Build `VibrationEffect.createWaveform(ReminderPattern.forKind(kind), -1)`.
+- Build `VibrationEffect.createWaveform(ReminderPattern.forKind(kind), -1)`, or the amplitude variant with `ReminderPattern.amplitudesForKind(kind)` when `hasAmplitudeControl()` is true.
 - API 33+: `VibrationAttributes.Builder().setUsage(USAGE_ALARM).setFlags(FLAG_BYPASS_INTERRUPTION_POLICY, FLAG_BYPASS_INTERRUPTION_POLICY).build()`, then the `VibrationAttributes` overload.
 - API 30–32: `AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build()`, then the deprecated `AudioAttributes` overload.
 

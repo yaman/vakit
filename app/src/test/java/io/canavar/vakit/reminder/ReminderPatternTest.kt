@@ -32,4 +32,20 @@ class ReminderPatternTest {
         assertEquals(1_400L, ReminderPattern.durationMillis(ReminderKind.STANDARD))
         assertEquals(7_450L, ReminderPattern.durationMillis(ReminderKind.GUNES))
     }
+
+    @Test
+    fun `amplitudes drive every pulse at maximum`() {
+        assertArrayEquals(
+            intArrayOf(0, 255, 0, 255, 0, 255),
+            ReminderPattern.amplitudesForKind(ReminderKind.STANDARD),
+        )
+
+        val gunes = ReminderPattern.amplitudesForKind(ReminderKind.GUNES)
+        assertEquals(26, gunes.size)
+        assertEquals(0, gunes[0])
+        assertEquals(255, gunes[1])
+        assertEquals(0, gunes[6])
+        assertEquals(255, gunes[25])
+        assertEquals(13, gunes.count { it == 255 })
+    }
 }

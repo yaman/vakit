@@ -64,7 +64,7 @@ Out of scope:
 - One pulse is 300 ms on followed by 250 ms off.
 - The standard pattern is three pulses: `[0, 300, 250, 300, 250, 300]`.
 - The Güneş pattern is three pulses, an 800 ms pause, then ten pulses. It has 13 on-pulses in total.
-- The waveform uses the default amplitude so the watch's vibration-intensity setting is respected.
+- The waveform requests maximum amplitude (255) on each pulse when the vibrator supports amplitude control; otherwise it uses the default amplitude. The watch's own vibration-intensity setting can still scale or cap the result.
 - The vibration uses alarm usage so background delivery is eligible. On API 33 and later it also sets `FLAG_BYPASS_INTERRUPTION_POLICY`. For an unprivileged app that flag is best-effort: the platform may ignore it, and DND behavior still depends on the watch's settings. The device check records what actually happens rather than assuming a bypass.
 - On API 30–32 the vibration uses `AudioAttributes.USAGE_ALARM`. Alarm usage is the best available DND behavior on those versions.
 - Theater mode and OEM power modes may still stop the motor at the platform or hardware level. The app cannot override that.
