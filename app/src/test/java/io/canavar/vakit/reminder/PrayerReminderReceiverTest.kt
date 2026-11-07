@@ -82,10 +82,7 @@ class PrayerReminderReceiverTest {
     fun `valid standard extras vibrate and reschedule`() {
         send(Prayer.IKINDI.name, System.currentTimeMillis() + LEAD_MS)
 
-        assertArrayEquals(
-            ReminderPattern.forKind(ReminderKind.STANDARD),
-            shadowOf(vibrator).pattern,
-        )
+        awaitVibration(ReminderPattern.forKind(ReminderKind.STANDARD))
         assertTrue(shadowOf(alarmManager).scheduledAlarms.isNotEmpty())
     }
 
@@ -93,10 +90,7 @@ class PrayerReminderReceiverTest {
     fun `gunes uses the long pattern`() {
         send(Prayer.GUNES.name, System.currentTimeMillis() + LEAD_MS)
 
-        assertArrayEquals(
-            ReminderPattern.forKind(ReminderKind.GUNES),
-            shadowOf(vibrator).pattern,
-        )
+        awaitVibration(ReminderPattern.forKind(ReminderKind.GUNES))
     }
 
     @Test
@@ -151,5 +145,15 @@ class PrayerReminderReceiverTest {
             Thread.sleep(10)
         }
         throw AssertionError("No reminder alarm was scheduled")
+    }
+
+    private fun awaitVibration(expected: LongArray) {
+        val deadline = System.currentTimeMillis() + 2_000
+        while (System.currentTimeMillis() < deadline) {
+            val pattern = shadowOf(vibrator).pattern
+            if (pattern != null && pattern.contentEquals(expected)) return
+            Thread.sleep(10)
+        }
+        throw AssertionError("Expected vibration pattern ${expected.toList()}")
     }
 }

@@ -86,4 +86,21 @@ class ReminderPlannerTest {
             assertNotEquals(Prayer.IMSAK, planner.next(now, today, tomorrow)?.prayer)
         }
     }
+
+    @Test
+    fun `selects the earliest reminder even when times are out of order`() {
+        val outOfOrder = DayTimes(
+            imsak = 100,
+            gunes = 900,
+            ogle = 200,
+            ikindi = 300,
+            aksam = 400,
+            yatsi = 500,
+        )
+
+        val next = planner.next(at(0, 0), outOfOrder, null)
+
+        assertEquals(Prayer.OGLE, next?.prayer)
+        assertEquals(at(3, 5), next?.at)
+    }
 }

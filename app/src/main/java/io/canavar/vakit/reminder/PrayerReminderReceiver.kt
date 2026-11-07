@@ -8,6 +8,7 @@ import io.canavar.vakit.domain.Prayer
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 internal fun parsePrayer(raw: String?): Prayer? =
@@ -19,21 +20,27 @@ class PrayerReminderReceiver : BroadcastReceiver() {
         val prayerAt = intent.getLongExtra(EXTRA_PRAYER_AT_EPOCH_MS, 0L)
         val prayer = parsePrayer(intent.getStringExtra(EXTRA_PRAYER))
         val kind = prayer?.let { ReminderKind.forPrayer(it) }
-        if (kind != null && ReminderTimes.shouldVibrate(now, prayerAt)) {
-            runCatching { ReminderVibrator(context).vibrate(kind) }
-        }
+        val shouldVibrate = kind != null && ReminderTimes.shouldVibrate(now, prayerAt)
 
         val pending = goAsync()
         val app = context.applicationContext as VakitApp
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                app.container.scheduleNextReminderAfter(
-                    ReminderTimes.resumeAtMillis(now, prayerAt),
-                )
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Exception) {
-                // The next scheduled run retries.
+                if (kind != null && shouldVibrate) {
+                    runCatching { ReminderVibrator(context).vibrate(kind) }
+                }
+                try {
+                    app.container.scheduleNextReminderAfter(
+                        ReminderTimes.resumeAtMillis(now, prayerAt),
+                    )
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    // The hourly worker or the next prayer-boundary alarm retries.
+                }
+                if (kind != null && shouldVibrate) {
+                    delay(ReminderPattern.durationMillis(kind))
+                }
             } finally {
                 pending.finish()
             }

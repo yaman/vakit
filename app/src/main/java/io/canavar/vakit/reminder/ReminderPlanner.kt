@@ -17,7 +17,7 @@ class ReminderPlanner {
             today?.let { addAll(candidatesFor(todayDate, it)) }
             tomorrow?.let { addAll(candidatesFor(tomorrowDate, it)) }
         }
-        return candidates.firstOrNull { it.at.isAfter(now) }
+        return candidates.filter { it.at.isAfter(now) }.minByOrNull { it.at }
     }
 
     private fun candidatesFor(date: LocalDate, times: DayTimes): List<Reminder> =

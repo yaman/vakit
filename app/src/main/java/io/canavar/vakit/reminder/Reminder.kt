@@ -32,6 +32,7 @@ data class Reminder(
 object ReminderTimes {
     const val LEAD_MINUTES = 15
     const val RESUME_GUARD_MS = 5_000L
+    private const val MAX_PRAYER_WINDOW_MS = 24 * 60 * 60_000L
 
     fun triggerAtMillis(reminder: Reminder, zone: ZoneId): Long =
         reminder.at.atZone(zone).toInstant().toEpochMilli()
@@ -40,10 +41,17 @@ object ReminderTimes {
         reminder.prayerAt.atZone(zone).toInstant().toEpochMilli()
 
     fun shouldVibrate(nowEpochMs: Long, prayerAtEpochMs: Long): Boolean =
-        prayerAtEpochMs > 0L && nowEpochMs < prayerAtEpochMs
+        prayerAtEpochMs > nowEpochMs &&
+            prayerAtEpochMs - nowEpochMs <= MAX_PRAYER_WINDOW_MS
 
     fun resumeAtMillis(nowEpochMs: Long, prayerAtEpochMs: Long): Long {
         if (prayerAtEpochMs <= 0L) return nowEpochMs + RESUME_GUARD_MS
+        if (prayerAtEpochMs > nowEpochMs + MAX_PRAYER_WINDOW_MS) {
+            return nowEpochMs + RESUME_GUARD_MS
+        }
+        if (prayerAtEpochMs < nowEpochMs - MAX_PRAYER_WINDOW_MS) {
+            return nowEpochMs + RESUME_GUARD_MS
+        }
         val reminderAt = prayerAtEpochMs - LEAD_MINUTES * 60_000L
         return maxOf(nowEpochMs, reminderAt) + RESUME_GUARD_MS
     }

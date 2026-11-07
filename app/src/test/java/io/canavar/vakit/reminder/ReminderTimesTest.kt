@@ -53,4 +53,18 @@ class ReminderTimesTest {
         assertEquals(reminderAt + 30_000, ReminderTimes.resumeAtMillis(reminderAt + 25_000, prayerAt))
         assertEquals(1_005_000L, ReminderTimes.resumeAtMillis(1_000_000L, 0L))
     }
+
+    @Test
+    fun `does not vibrate for an implausible future prayer`() {
+        val now = 1_000_000L
+        assertFalse(ReminderTimes.shouldVibrate(now, now + 25 * 60 * 60_000L))
+    }
+
+    @Test
+    fun `resume ignores implausible extra timestamps`() {
+        val now = 1_000_000L
+        val window = 25 * 60 * 60_000L
+        assertEquals(now + 5_000, ReminderTimes.resumeAtMillis(now, now + window))
+        assertEquals(now + 5_000, ReminderTimes.resumeAtMillis(now, now - window))
+    }
 }

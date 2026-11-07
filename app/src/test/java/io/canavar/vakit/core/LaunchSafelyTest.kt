@@ -11,4 +11,14 @@ class LaunchSafelyTest {
         job.join()
         assertTrue(job.isCompleted)
     }
+
+    @Test
+    fun `runSafely lets a second action run after the first fails`() = runTest {
+        var secondRan = false
+
+        runSafely { throw IllegalStateException("boom") }
+        runSafely { secondRan = true }
+
+        assertTrue(secondRan)
+    }
 }

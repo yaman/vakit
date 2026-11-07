@@ -10,6 +10,8 @@ object ReminderPattern {
         ReminderKind.GUNES -> waveform(pulses(3) + GROUP_GAP_MS + pulses(10))
     }
 
+    fun durationMillis(kind: ReminderKind): Long = forKind(kind).sum()
+
     private fun pulses(count: Int): List<Long> = buildList {
         repeat(count) { index ->
             add(PULSE_MS)

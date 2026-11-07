@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import io.canavar.vakit.complication.BoundaryScheduler
 import io.canavar.vakit.core.launchSafely
+import io.canavar.vakit.core.runSafely
 import io.canavar.vakit.complication.ComplicationRefresher
 import io.canavar.vakit.complication.ComplicationUpdater
 import io.canavar.vakit.data.DataStoreSettingsRepository
@@ -13,6 +14,7 @@ import io.canavar.vakit.data.SqliteTimetableRepository
 import io.canavar.vakit.data.TimetableDb
 import io.canavar.vakit.data.TimetableRepository
 import io.canavar.vakit.data.settingsDataStore
+import io.canavar.vakit.domain.DayTimes
 import io.canavar.vakit.domain.DistrictSelector
 import io.canavar.vakit.domain.NextEntry
 import io.canavar.vakit.domain.NextEntryResolver
@@ -80,8 +82,8 @@ class AppContainer(private val context: Context) {
     }
 
     suspend fun scheduleNextEvents() {
-        scheduleNextBoundary()
-        scheduleNextReminder()
+        runSafely { scheduleNextBoundary() }
+        runSafely { scheduleNextReminder() }
     }
 
     suspend fun loadStatus(
@@ -123,43 +125,29 @@ class AppContainer(private val context: Context) {
 
     suspend fun nextEntryAt(districtId: Int, now: LocalDateTime): NextEntry? =
         withContext(Dispatchers.IO) {
-            val today = now.toLocalDate()
-            val tomorrow = today.plusDays(1)
-            val todayMonthDay = canonicalMonthDay(today)
-            val tomorrowMonthDay = canonicalMonthDay(tomorrow)
-            resolver.resolve(
-                now = now,
-                today = timetable.times(
-                    districtId,
-                    todayMonthDay.monthValue,
-                    todayMonthDay.dayOfMonth,
-                ),
-                tomorrow = timetable.times(
-                    districtId,
-                    tomorrowMonthDay.monthValue,
-                    tomorrowMonthDay.dayOfMonth,
-                ),
-            )
+            val (today, tomorrow) = dayTimes(districtId, now)
+            resolver.resolve(now = now, today = today, tomorrow = tomorrow)
         }
 
     suspend fun nextReminderAt(districtId: Int, now: LocalDateTime): Reminder? =
         withContext(Dispatchers.IO) {
-            val today = now.toLocalDate()
-            val tomorrow = today.plusDays(1)
-            val todayMonthDay = canonicalMonthDay(today)
-            val tomorrowMonthDay = canonicalMonthDay(tomorrow)
-            reminderPlanner.next(
-                now = now,
-                today = timetable.times(
-                    districtId,
-                    todayMonthDay.monthValue,
-                    todayMonthDay.dayOfMonth,
-                ),
-                tomorrow = timetable.times(
-                    districtId,
-                    tomorrowMonthDay.monthValue,
-                    tomorrowMonthDay.dayOfMonth,
-                ),
-            )
+            val (today, tomorrow) = dayTimes(districtId, now)
+            reminderPlanner.next(now = now, today = today, tomorrow = tomorrow)
         }
+
+    private fun dayTimes(districtId: Int, now: LocalDateTime): Pair<DayTimes?, DayTimes?> {
+        val today = now.toLocalDate()
+        val tomorrow = today.plusDays(1)
+        val todayMonthDay = canonicalMonthDay(today)
+        val tomorrowMonthDay = canonicalMonthDay(tomorrow)
+        return timetable.times(
+            districtId,
+            todayMonthDay.monthValue,
+            todayMonthDay.dayOfMonth,
+        ) to timetable.times(
+            districtId,
+            tomorrowMonthDay.monthValue,
+            tomorrowMonthDay.dayOfMonth,
+        )
+    }
 }

@@ -124,18 +124,21 @@ fun StatusRoute() {
             try {
                 exactAlarmLauncher.launch(intent)
             } catch (_: Exception) {
-                context.startActivity(
-                    Intent(
-                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                        Uri.parse("package:${context.packageName}"),
-                    ),
-                )
+                runCatching {
+                    exactAlarmLauncher.launch(
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:${context.packageName}"),
+                        ),
+                    )
+                }
             }
         },
         onUseGps = {
             scope.launchSafely {
                 container.settings.setAutoLocation(true)
                 container.settings.clearDistrict()
+                container.scheduleNextReminder()
                 LocationScheduler.runNow(context)
                 reload++
             }
